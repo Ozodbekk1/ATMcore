@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import connectToDatabase from '../../../../../lib/mongodb';
-import { User } from '../../../../../models/User';
+import connectToDatabase from "@/lib/mongodb";
+import { User } from "@/models/User";
 
 export async function POST(req: Request) {
     try {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
         await user.save();
 
         return NextResponse.json({ message: 'Password has been reset successfully' });
-    } catch(err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch(err: unknown) {
+        return NextResponse.json({ error: (err instanceof Error ? err.message : "Internal error") }, { status: 500 });
     }
 }

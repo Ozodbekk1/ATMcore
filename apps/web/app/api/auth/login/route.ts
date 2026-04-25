@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import connectToDatabase from '../../../../../lib/mongodb';
-import { User } from '../../../../../models/User';
+import connectToDatabase from '@/lib/mongodb';
+import { User } from '@/models/User';
 
 export async function POST(req: Request) {
   try {
@@ -13,13 +13,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user || !user.password) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
     if (!user.isVerified) {
-        return NextResponse.json({ error: 'Please verify your email address to log in' }, { status: 403 });
+      return NextResponse.json({ error: 'Please verify your email address to log in' }, { status: 403 });
     }
 
     const isValid = await bcrypt.compare(password, user.password);
@@ -27,14 +27,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('JWT_SECRET is missing from environment variables.');
+      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+
     const token = jwt.sign(
-      { id: user._id, role: user.role, email: user.email },
-      process.env.JWT_SECRET || 'fallback-secret-key-change-in-prod',
+      { userId: user._id, role: user.role, email: user.email, name: user.name },
+      secret,
       { expiresIn: '1d' }
     );
 
-    return NextResponse.json({ message: 'Login successful', token, user: { name: user.name, role: user.role, email: user.email } });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const res = NextResponse.json({
+      message: 'Login successful',
+      user: { name: user.name, role: user.role, email: user.email },
+    });
+
+    // Set HTTP-only cookie so middleware and /api/auth/me can read the token
+    res.cookies.set({
+      name: 'token',
+      value: token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 1 day
+    });
+
+    return res;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

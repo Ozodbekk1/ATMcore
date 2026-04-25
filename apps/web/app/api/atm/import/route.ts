@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { importAtmJsonData } from '../../../services/jsonImportService';
+import { importAtmJsonData } from "@/services/jsonImportService";
 
 export async function POST(req: Request) {
   try {

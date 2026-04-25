@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { syncAtmDataFromSheets } from '../../../services/googleSheetsService';
+import { syncAtmDataFromSheets } from "@/services/googleSheetsService";
 
 export async function POST(req: Request) {
   try {

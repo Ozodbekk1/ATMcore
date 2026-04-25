@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import connectToDatabase from '../../../../../lib/mongodb';
-import { User } from '../../../../../models/User';
-import { sendResetPasswordEmail } from '../../../../../services/emailService';
+import connectToDatabase from "@/lib/mongodb";
+import { User } from "@/models/User";
+import { sendResetPasswordEmail } from "@/services/emailService";
 
 export async function POST(req: Request) {
     try {
@@ -13,16 +13,17 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Email is required' }, { status: 400 });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: email.toLowerCase() });
         
         if (!user) {
-            return NextResponse.json({ message: 'If an account exists, a reset instruction has been sent.' }, { status: 200 }); // Prevent email enumeration
+            // Prevent email enumeration — always return success
+            return NextResponse.json({ message: 'If an account exists, a reset instruction has been sent.' }, { status: 200 });
         }
 
         const resetToken = crypto.randomBytes(32).toString('hex');
         
         user.resetPasswordToken = resetToken;
-        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+        user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
         
         await user.save();
         
@@ -33,7 +34,7 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ message: 'If an account exists, a reset instruction has been sent.' }, { status: 200 });
-    } catch(err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch(err: unknown) {
+        return NextResponse.json({ error: (err instanceof Error ? err.message : "Internal error") }, { status: 500 });
     }
 }

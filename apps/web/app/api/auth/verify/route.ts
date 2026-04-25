@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import connectToDatabase from '../../../../../lib/mongodb';
-import { User } from '../../../../../models/User';
+import connectToDatabase from "@/lib/mongodb";
+import { User } from "@/models/User";
 
 export async function GET(req: Request) {
   try {
@@ -23,8 +23,10 @@ export async function GET(req: Request) {
     user.verificationToken = undefined;
     await user.save();
 
-    return NextResponse.redirect(new URL('/login?verified=true', req.url));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Redirect to the app root — the auth page will show with a success state
+    return NextResponse.redirect(new URL('/?verified=true', req.url));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

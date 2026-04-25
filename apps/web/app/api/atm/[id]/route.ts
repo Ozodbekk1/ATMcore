@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { Atm } from '../../../../models/Atm';
 import connectToDatabase from '../../../../lib/mongodb';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     await connectToDatabase();
 
@@ -15,8 +18,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 
     return NextResponse.json({ data: atm });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Server Error';
     console.error('Get ATM Error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

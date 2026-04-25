@@ -14,12 +14,11 @@ export async function getGoogleSheetsClient() {
   }
 
   const keys = JSON.parse(credentials);
-  const client = new google.auth.JWT(
-    keys.client_email,
-    undefined,
-    keys.private_key,
-    SCOPES
-  );
+  const client = new google.auth.JWT({
+    email: keys.client_email,
+    key: keys.private_key,
+    scopes: SCOPES
+  });
 
   await client.authorize();
   return google.sheets({ version: 'v4', auth: client });
