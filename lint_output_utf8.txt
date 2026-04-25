@@ -1,0 +1,20 @@
+﻿yarn workspace v1.22.22
+yarn run v1.22.22
+$ eslint
+
+C:\Users\acer\Documents\╨Э╨╛╨▓╨░╤П ╨┐╨░╨┐╨║╨░\ATMcore\apps\web\app\alerts\page.tsx
+  2:10  warning  'Bell' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\acer\Documents\╨Э╨╛╨▓╨░╤П ╨┐╨░╨┐╨║╨░\ATMcore\apps\web\app\analytics\page.tsx
+  2:21  warning  'TrendingUp' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\acer\Documents\╨Э╨╛╨▓╨░╤П ╨┐╨░╨┐╨║╨░\ATMcore\apps\web\app\page.tsx
+  23:45  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\acer\Documents\╨Э╨╛╨▓╨░╤П ╨┐╨░╨┐╨║╨░\ATMcore\apps\web\components\StatCard.tsx
+  3:88  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+тЬЦ 4 problems (2 errors, 2 warnings)
+
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
+info Visit https://yarnpkg.com/en/docs/cli/workspace for documentation about this command.
