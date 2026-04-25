@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Moon, Settings, LogOut, MapPin, AlertTriangle, Route } from 'lucide-react';
+import { Search, Bell, Settings, LogOut, MapPin, AlertTriangle, Route } from 'lucide-react';
 import { useBadges, defaultBadges } from './BadgeContext';
 import { useAuth } from './AuthContext';
 import { useRouter } from 'next/navigation';
@@ -113,10 +113,7 @@ export function Header() {
               <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-[#fb7185] rounded-full border-2 border-[#0a241c]"></span>
             )}
           </button>
-          <button className="bg-[#0a241c] p-2.5 rounded-full border border-[#133c2e] hover:bg-[#0e3227] transition-colors">
-            <Moon className="h-4 w-4 text-[#9de1b9]" />
-          </button>
-          <button className="bg-[#0a241c] p-2.5 rounded-full border border-[#133c2e] hover:bg-[#0e3227] transition-colors">
+          <button onClick={() => router.push('/settings')} className="bg-[#0a241c] p-2.5 rounded-full border border-[#133c2e] hover:bg-[#0e3227] transition-colors">
             <Settings className="h-4 w-4 text-[#9de1b9]" />
           </button>
           <button onClick={logout} className="bg-[#1f1115] p-2.5 rounded-full border border-rose-900/30 hover:bg-[#2b161c] transition-colors ml-2" title="Log Out">

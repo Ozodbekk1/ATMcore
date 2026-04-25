@@ -1,10 +1,25 @@
 "use client";
 import React, { useState } from 'react';
-import { ShieldCheck, AlertTriangle, X, Target, Crosshair, ChevronRight, BrainCircuit, BarChart2 } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, X, Target, Crosshair, ChevronRight, BrainCircuit, BarChart2, MapPin, Navigation } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const RealMap = dynamic(() => import('./MapComponent'), { ssr: false, loading: () => <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#061814] text-[#9de1b9] font-mono text-sm tracking-widest uppercase"><div className="w-8 h-8 border-2 border-[#9de1b9] border-t-transparent rounded-full animate-spin mb-4"></div>Initialize Satellite Link...</div> });
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '../../components/AuthContext';
+
+// using haversine formula to calculate distance in km
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const d = R * c; // Distance in km
+  return d;
+};
 
 export interface RegionMarker {
   id: number;
@@ -23,7 +38,12 @@ export interface RegionMarker {
 function MapContent() {
   const [selectedRegion, setSelectedRegion] = useState<RegionMarker | null>(null);
   const [showAIChatPanel, setShowAIChatPanel] = useState(false);
+  const [showNearby, setShowNearby] = useState(false);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [nearbyATMs, setNearbyATMs] = useState<(RegionMarker & { distance: number })[]>([]);
+  const [isLocating, setIsLocating] = useState(false);
   const searchParams = useSearchParams();
+  const { role } = useAuth();
 
   React.useEffect(() => {
     setShowAIChatPanel(false);
@@ -135,7 +155,7 @@ function MapContent() {
       
       {/* Real Leaflet Map Background */}
       <div className="absolute inset-0 z-0">
-        <RealMap markers={markers} selectedRegion={selectedRegion} setSelectedRegion={setSelectedRegion} />
+        <RealMap markers={markers} selectedRegion={selectedRegion} setSelectedRegion={setSelectedRegion} userLocation={userLocation} />
       </div>
 
       {/* Floating Header UI overlay - No Pointer Events on wrapper so map clicks aren't blocked */}
@@ -203,13 +223,15 @@ function MapContent() {
                   <p className={`text-lg font-bold ${selectedRegion.details.dailyTrend.startsWith('+') ? 'text-[#9de1b9]' : 'text-[#fb7185]'}`}>{selectedRegion.details.dailyTrend}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowAIChatPanel(!showAIChatPanel)}
-                className="mt-4 w-full bg-[#12382c]/80 hover:bg-[#1a4a3a] border border-[#1c5542] text-[#9de1b9] py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors shadow-[0_0_15px_rgba(18,56,44,0.4)]"
-              >
-                <BrainCircuit className="w-4 h-4 animate-pulse" />
-                {showAIChatPanel ? 'Close AI Analysis' : 'Analyze with Nexus AI'}
-              </button>
+              {(role === 'admin' || role === 'superadmin') && (
+                <button 
+                  onClick={() => setShowAIChatPanel(!showAIChatPanel)}
+                  className="mt-4 w-full bg-[#12382c]/80 hover:bg-[#1a4a3a] border border-[#1c5542] text-[#9de1b9] py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors shadow-[0_0_15px_rgba(18,56,44,0.4)]"
+                >
+                  <BrainCircuit className="w-4 h-4 animate-pulse" />
+                  {showAIChatPanel ? 'Close AI Analysis' : 'Analyze with Nexus AI'}
+                </button>
+              )}
             </div>
 
             {/* Panel Body: AI or Mahallas */}
@@ -250,6 +272,16 @@ function MapContent() {
                   {/* Fake User History Bubble */}
                    <div className="bg-[#12382c] border border-[#1c5542] p-4 rounded-2xl rounded-tr-sm self-end inline-block ml-auto text-[#9de1b9] shadow-lg text-[13px] font-mono mt-6 w-max max-w-[85%] text-right float-right clear-both">
                       What are the backup nodes nearby?
+                   </div>
+
+                   {/* AI Follow-up Bubble */}
+                   <div className="bg-[#0a241c] border border-[#1c5542] p-5 rounded-2xl rounded-tl-sm self-start inline-block w-[90%] text-[#e2f1ea] shadow-lg text-[13px] font-mono leading-relaxed relative mt-2 float-left clear-both">
+                      <div className="absolute -left-2 top-0 w-2 h-2 rounded-full bg-[#9de1b9] shadow-[0_0_8px_#9de1b9]"></div>
+                      <strong className="text-[#9de1b9] flex items-center gap-2 mb-3 border-b border-[#133c2e] pb-2 font-sans tracking-tight text-sm"><BrainCircuit className="w-4 h-4"/> NEXUS AI ANALYSIS</strong>
+                      Based on current topography, the nearest operational equivalents are:<br/><br/>
+                      1. <strong className="font-sans text-[#e2f1ea]">Navoi Vault</strong> (34km away) - <span className="text-[#9de1b9]">Optimal / 65% capacity</span><br/>
+                      2. <strong className="font-sans text-[#e2f1ea]">Route Beta Mobile Hub</strong> - <span className="text-amber-400">In Transit (ETA 40m)</span><br/><br/>
+                      Would you like to auto-re-route incoming requests to these nodes?
                    </div>
 
                 </div>
@@ -306,6 +338,102 @@ function MapContent() {
           </div>
         )}
       </div>
+
+      {/* Nearest ATMs Feature (Visible to all users) */}
+      <div className={`absolute bottom-8 right-6 z-[10] transition-all duration-500 flex flex-col items-end gap-3 ${selectedRegion ? 'translate-x-[200%] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'}`}>
+         
+         {showNearby && (
+            <div className="bg-[#04120e]/95 backdrop-blur-xl border border-[#1c5542] w-72 sm:w-80 rounded-2xl shadow-[0_0_30px_rgba(3,17,13,1)] p-5 animate-in slide-in-from-bottom-4">
+               <div className="flex justify-between items-center mb-4 border-b border-[#133c2e] pb-3">
+                  <h4 className="text-[#9de1b9] font-bold text-sm flex items-center gap-2">
+                     <Navigation className="w-4 h-4 text-[#9de1b9] animate-pulse" />
+                     NEARBY ATMs <span className="opacity-70 text-xs font-normal">(5km)</span>
+                  </h4>
+                  <button onClick={() => setShowNearby(false)} className="text-[#5d8573] hover:text-[#fb7185] transition-colors bg-[#0a241c] p-1.5 rounded-full"><X className="w-3 h-3" /></button>
+               </div>
+
+               <div className="space-y-3 font-mono max-h-60 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-[#133c2e]">
+                  <div className="text-[10px] text-[#5d8573] flex items-center gap-1.5 mb-2">
+                     <MapPin className="w-3 h-3" /> Current Loc: {userLocation ? `${userLocation[0].toFixed(4)}, ${userLocation[1].toFixed(4)}` : 'Unknown'}
+                  </div>
+                  
+                  {nearbyATMs.length === 0 && (
+                    <div className="text-[#5d8573] text-xs py-4 text-center border border-[#133c2e] rounded-xl bg-[#0a241c]">
+                      No ATMs found within 5km radius.
+                    </div>
+                  )}
+
+                  {nearbyATMs.map((atm) => {
+                    const isOpt = atm.status === 'optimal';
+                    const isWarn = atm.status === 'warning';
+                    return (
+                      <div 
+                        key={atm.id}
+                        onClick={() => {
+                          const found = markers.find(m => m.id === atm.id);
+                          if (found) setSelectedRegion(found);
+                          setShowNearby(false);
+                        }}
+                        className={`${isOpt ? 'bg-[#0a241c] hover:bg-[#12382c] border-[#133c2e]' : isWarn ? 'bg-[#241e17] hover:bg-[#3d3121] border-amber-900/30' : 'bg-[#1f1115] hover:bg-[#2e151b] border-rose-900/30'} border p-3 rounded-xl cursor-pointer transition-colors group flex justify-between items-center shadow-lg`}
+                      >
+                         <div>
+                            <p className={`font-bold text-xs transition-colors ${isOpt ? 'text-[#e2f1ea] group-hover:text-[#9de1b9]' : isWarn ? 'text-[#e2f1ea] group-hover:text-amber-400' : 'text-[#e2f1ea] group-hover:text-[#fb7185]'}`}>{atm.name}</p>
+                            <p className="text-[9px] text-[#5d8573] mt-1">Cash: <span className={`font-bold ${isOpt ? 'text-[#9de1b9]' : isWarn ? 'text-amber-400' : 'text-[#fb7185]'}`}>{atm.cash}</span> • {isOpt ? 'Optimal' : isWarn ? 'High Risk' : 'Critical'}</p>
+                         </div>
+                         <div className="flex flex-col items-end gap-1">
+                           <span className={`font-bold text-[10px] px-2 py-0.5 rounded-md border transition-colors ${isOpt ? 'text-[#9de1b9] bg-[#12382c] border-[#1c5542]' : isWarn ? 'text-amber-400 bg-[#3d3121] border-amber-900/50' : 'text-[#fb7185] bg-[#0a241c] border-[#1c5542] group-hover:bg-[#fb7185]/20'}`}>{atm.distance.toFixed(2)} km</span>
+                         </div>
+                      </div>
+                    );
+                  })}
+               </div>
+            </div>
+         )}
+
+         {!showNearby && (
+           <button 
+             onClick={() => {
+                setIsLocating(true);
+                if ("geolocation" in navigator) {
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      const lat = position.coords.latitude;
+                      const lng = position.coords.longitude;
+                      const loc: [number, number] = [lat, lng];
+                      setUserLocation(loc);
+                      
+                      const withDistance = markers.map(m => ({
+                        ...m,
+                        distance: calculateDistance(lat, lng, m.coords[0], m.coords[1])
+                      }));
+                      
+                      const nearby = withDistance.filter(m => m.distance <= 5).sort((a, b) => a.distance - b.distance);
+                      
+                      setNearbyATMs(nearby);
+                      setIsLocating(false);
+                      setShowNearby(true);
+                      setSelectedRegion(null);
+                    },
+                    (error) => {
+                      console.error("Error getting location", error);
+                      alert("Location access denied or unavailable.");
+                      setIsLocating(false);
+                    }
+                  );
+                } else {
+                  alert("Geolocation is not supported by your browser");
+                  setIsLocating(false);
+                }
+             }}
+             disabled={isLocating}
+             className={`bg-[#04120e] backdrop-blur-md border border-[#1c5542] hover:bg-[#12382c] text-[#9de1b9] px-4 py-3 sm:px-6 sm:py-4 rounded-full shadow-[0_0_25px_rgba(18,56,44,0.6)] flex items-center gap-3 transition-all hover:scale-105 group ${isLocating ? 'opacity-70 cursor-wait' : ''}`}
+           >
+             <MapPin className={`w-5 h-5 ${isLocating ? 'animate-spin' : 'group-hover:animate-bounce'}`} />
+             <span className="font-bold uppercase tracking-widest text-[11px] hidden sm:block">{isLocating ? 'Locating...' : 'Find Nearest ATMs'}</span>
+           </button>
+         )}
+      </div>
+
     </div>
   );
 }
