@@ -1,3 +1,4 @@
+"use client";
 import React from 'react';
 import { 
   DollarSign, 
@@ -7,180 +8,206 @@ import {
   MapPin,
   Clock,
   ChevronRight,
-  ChevronDown,
   AlertTriangle,
-  Bell
+  Bell,
+  BarChart3,
+  List,
+  Navigation,
+  HeartPulse
 } from 'lucide-react';
 import { StatCard } from '../components/StatCard';
+import Link from 'next/link';
+import { useAuth } from '../components/AuthContext';
 
 export default function ATMPlatform() {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin' || role === 'superadmin';
+
+  const atms = [
+    { name: "Downtown Financial District", cash: "85%", rawCash: 85, status: "optimal", location: "Main Street Branch" },
+    { name: "Nukus Terminal", cash: "15%", rawCash: 15, status: "warning", location: "Amudaryo Mahalla" },
+  ];
+
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full space-y-8">
+    <div className="p-8 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] space-y-8">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 border-b border-[#133c2e] pb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2 tracking-tight">System Overview</h1>
+          <p className="text-[#78a390]">
+            {isAdmin ? 'Daily snapshot of ATM operations and active network status.' : 'Find active ATMs and check network status.'}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Link href="/live-map" className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" /> Live Map
+          </Link>
+        </div>
+      </div>
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          label="Total Cash Available" 
-          value="$0.95M" 
-          trend="+5.2%" 
-          trendUp={true} 
-          icon={<DollarSign className="h-5 w-5 text-[#071a14]" />} 
-          bgClass="bg-[#0a241c] border-[#133c2e]"
-          iconBgClass="bg-[#9de1b9]"
-        />
-        <StatCard 
-          label="Avg Cash Level" 
-          value="51%" 
-          trend="-2.1%" 
-          trendUp={false} 
-          icon={<TrendingUp className="h-5 w-5 text-[#071a14]" />} 
-          bgClass="bg-[#0a241c] border-[#133c2e]"
-          iconBgClass="bg-[#9de1b9]"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {isAdmin ? (
+          <>
+            <StatCard 
+              label="Total Cash Available" 
+              value="$2.4M" 
+              trend="+5.2%" 
+              trendUp={true} 
+              icon={<DollarSign className="w-5 h-5 text-[#9de1b9]" />} 
+              bgClass="bg-[#0a241c] border-[#133c2e] hover:border-[#1c5542] transition-colors"
+              iconBgClass="bg-[#12382c] border border-[#1c5542]"
+            />
+            <StatCard 
+              label="Avg Cash Level" 
+              value="51%" 
+              trend="-2.1%" 
+              trendUp={false} 
+              icon={<Activity className="w-5 h-5 text-[#9de1b9]" />} 
+              bgClass="bg-[#0a241c] border-[#133c2e] hover:border-[#1c5542] transition-colors"
+              iconBgClass="bg-[#12382c] border border-[#1c5542]"
+            />
+          </>
+        ) : (
+          <>
+            <StatCard 
+              label="Nearby ATMs" 
+              value="12" 
+              trend="+2 available" 
+              trendUp={true} 
+              icon={<Navigation className="w-5 h-5 text-[#9de1b9]" />} 
+              bgClass="bg-[#0a241c] border-[#133c2e] hover:border-[#1c5542] transition-colors"
+              iconBgClass="bg-[#12382c] border border-[#1c5542]"
+            />
+            <StatCard 
+              label="Overall Network Health" 
+              value="Good" 
+              trend="All systems go" 
+              trendUp={true} 
+              icon={<HeartPulse className="w-5 h-5 text-[#9de1b9]" />} 
+              bgClass="bg-[#0a241c] border-[#133c2e] hover:border-[#1c5542] transition-colors"
+              iconBgClass="bg-[#12382c] border border-[#1c5542]"
+            />
+          </>
+        )}
+        
         <StatCard 
           label="Daily Transactions" 
-          value="435" 
+          value="45,210" 
           trend="+12.5%" 
           trendUp={true} 
-          icon={<Activity className="h-5 w-5 text-[#071a14]" />} 
-          bgClass="bg-[#0a241c] border-[#133c2e]"
-          iconBgClass="bg-[#9de1b9]"
+          icon={<TrendingUp className="w-5 h-5 text-[#9de1b9]" />} 
+          bgClass="bg-[#0a241c] border-[#133c2e] hover:border-[#1c5542] transition-colors"
+          iconBgClass="bg-[#12382c] border border-[#1c5542]"
         />
         <StatCard 
           label="Network Uptime" 
-          value="97.1%" 
-          trend="+0.3%" 
+          value="99.8%" 
+          trend="+0.1%" 
           trendUp={true} 
-          icon={<CheckCircle className="h-5 w-5 text-[#071a14]" />} 
-          bgClass="bg-[#0a241c] border-[#133c2e]"
-          iconBgClass="bg-[#9de1b9]"
+          icon={<CheckCircle className="w-5 h-5 text-[#9de1b9]" />} 
+          bgClass="bg-[#0a241c] border-[#133c2e] hover:border-[#1c5542] transition-colors"
+          iconBgClass="bg-[#12382c] border border-[#1c5542]"
         />
       </div>
 
-      {/* Main Dashboard Area */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* ATM Status */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        
+        {/* ATMs Overview */}
         <div className="xl:col-span-2 space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-[#e2f1ea]">ATM Status</h3>
-            <button className="flex items-center gap-2 bg-[#0a241c] border border-[#133c2e] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#0e3227] transition-colors text-[#9de1b9]">
-              All ATMs <ChevronDown className="h-4 w-4 text-[#9de1b9]" />
-            </button>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-[#e2f1ea] flex items-center gap-2">
+              <List className="w-5 h-5 text-[#5d8573]" /> Main Terminals
+            </h3>
           </div>
           
-          {/* ATM Card */}
-          <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl hover:border-[#1c5542] transition-all cursor-pointer group">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h4 className="text-xl font-bold text-[#e2f1ea] mb-2 group-hover:text-[#9de1b9] transition-colors">Downtown Financial District</h4>
-                <div className="flex items-center text-[#78a390] text-sm">
-                  <MapPin className="h-4 w-4 mr-1.5" />
-                  Main Street Branch
+          <div className="space-y-4">
+            {atms.map((node, idx) => {
+              const isWarn = node.status === 'warning';
+              
+              return (
+                <div key={idx} className={`bg-[#0a241c] p-6 rounded-2xl border transition-colors ${
+                  isWarn ? 'border-amber-500/30' : 'border-[#133c2e]'
+                }`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-bold text-[#e2f1ea] text-lg mb-1">{node.name}</h4>
+                      <p className="text-sm text-[#78a390] flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {node.location}</p>
+                    </div>
+                    {/* Public status text instead of "Warning" / "Optimal" */}
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full border ${
+                      isWarn ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' : 'bg-[#12382c] text-[#9de1b9] border-[#1c5542]'
+                    }`}>
+                      {isWarn ? (isAdmin ? 'Warning' : 'Low Cash') : (isAdmin ? 'Optimal' : 'Available')}
+                    </span>
+                  </div>
+                  
+                  {isAdmin ? (
+                    <div className="space-y-2">
+                       <div className="flex justify-between items-end">
+                         <span className="text-sm text-[#78a390]">Cash Level</span>
+                         <span className={`text-2xl font-bold ${isWarn ? 'text-amber-500' : 'text-[#e2f1ea]'}`}>{node.cash}</span>
+                       </div>
+                       <div className="h-3 w-full bg-[#03110d] rounded-full overflow-hidden border border-[#133c2e]">
+                         <div 
+                           className={`h-full rounded-full ${isWarn ? 'bg-amber-500' : 'bg-[#9de1b9]'}`} 
+                           style={{ width: node.cash }}
+                         />
+                       </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-[#78a390] bg-[#03110d] p-3 rounded-xl border border-[#133c2e]">
+                      <CheckCircle className={`w-4 h-4 ${isWarn ? 'text-amber-500' : 'text-[#9de1b9]'}`} />
+                      Terminal is currently functioning and accepting requests.
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="bg-[#12382c] text-[#9de1b9] border border-[#1c5542] px-3 py-1 rounded-full text-xs font-bold tracking-wide">
-                  OPTIMAL
-                </span>
-                <ChevronRight className="h-5 w-5 text-[#5d8573] group-hover:text-[#9de1b9]" />
-              </div>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between items-end">
-                <span className="text-sm font-medium text-[#78a390]">Cash Level</span>
-                <span className="text-3xl font-bold text-[#e2f1ea]">85%</span>
-              </div>
-              <div className="h-3 w-full bg-[#061814] rounded-full overflow-hidden border border-[#133c2e]">
-                <div className="h-full bg-[#9de1b9] rounded-full" style={{ width: '85%' }}></div>
-              </div>
-              <div className="flex justify-between text-xs text-[#5d8573] font-medium tracking-wide">
-                <span>$212 500</span>
-                <span>Cap: $250 000</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 pt-5 border-t border-[#133c2e]/60">
-              <div className="flex items-center gap-2">
-                <div className="bg-[#061814] p-2 rounded-lg border border-[#133c2e]">
-                  <Clock className="h-4 w-4 text-[#78a390]" />
-                </div>
-                <div>
-                  <p className="text-xs text-[#5d8573] mb-0.5">Empty in</p>
-                  <p className="text-sm font-semibold text-[#e2f1ea]">7d</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-[#061814] p-2 rounded-lg border border-[#133c2e]">
-                  <Activity className="h-4 w-4 text-[#78a390]" />
-                </div>
-                <div>
-                  <p className="text-xs text-[#5d8573] mb-0.5">Today</p>
-                  <p className="text-sm font-semibold text-[#e2f1ea]">48</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-[#061814] p-2 rounded-lg border border-[#133c2e]">
-                  <TrendingUp className="h-4 w-4 text-[#78a390]" />
-                </div>
-                <div>
-                  <p className="text-xs text-[#5d8573] mb-0.5">Trend</p>
-                  <p className="text-sm font-semibold text-[#e2f1ea]">→</p>
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Recent Alerts */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-[#e2f1ea]">Recent Alerts</h3>
-            <div className="bg-[#1f1115] text-[#fb7185] border border-rose-900/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
-              <Bell className="h-3 w-3" /> 4
-            </div>
-          </div>
-          
-          <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-4 shadow-xl flex flex-col gap-3 relative overflow-hidden">
-             {/* Decorative vertical line */}
-             <div className="absolute right-3 top-6 bottom-6 w-1 bg-[#133c2e] rounded-full">
-                <div className="h-1/3 bg-[#5d8573] rounded-full"></div>
-             </div>
-
-            {/* Alert Item 1 */}
-            <div className="bg-[#1a2d1d] border border-[#9de1b9]/30 p-4 rounded-xl flex gap-4 mr-6">
-              <div className="mt-0.5">
-                <AlertTriangle className="h-5 w-5 text-[#9de1b9]" />
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <h5 className="font-semibold text-[#e2f1ea] text-sm">Grand Central Station</h5>
-                  <button className="bg-[#071a14] border border-[#133c2e] text-[#9de1b9] text-xs px-2 py-1 rounded hover:bg-[#133c2e] transition-colors">Ack</button>
-                </div>
-                <p className="text-xs text-[#9de1b9]/80 mb-2">Cash level at 29% - refill scheduled for tomorrow</p>
-                <div className="flex items-center text-[10px] text-[#5d8573] font-medium">
-                  <Clock className="h-3 w-3 mr-1" /> 11:00:00
-                </div>
+        {/* Recent Alerts (Hide entirely for normal users, they don't need to see system jams) */}
+        {isAdmin && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#e2f1ea]">Recent Alerts</h3>
+              <div className="bg-[#1f1115] text-[#fb7185] border border-rose-900/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+                <Bell className="h-3 w-3" /> 2 New
               </div>
             </div>
-
-            {/* Alert Item 2 */}
-            <div className="bg-[#241e17] border border-amber-900/40 p-4 rounded-xl flex gap-4 mr-6">
-              <div className="mt-0.5">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
-                  <h5 className="font-semibold text-[#e2f1ea] text-sm">Airport Terminal 3</h5>
-                  <button className="bg-transparent border border-amber-800 text-amber-200 text-xs px-2 py-1 rounded hover:bg-amber-900/50 transition-colors">Ack</button>
+            
+            <div className="space-y-3">
+              <div className="bg-[#0a241c] border border-[#133c2e] p-5 rounded-2xl flex gap-4 transition-colors">
+                <div className="bg-[#1f1115] border border-[#fb7185]/30 p-2.5 rounded-xl h-max">
+                  <AlertTriangle className="h-5 w-5 text-[#fb7185]" />
                 </div>
-                <p className="text-xs text-amber-200/70 mb-2">Cash level below 50% - refill recommended within 48 hours</p>
-                <div className="flex items-center text-[10px] text-[#5d8573] font-medium">
-                  <Clock className="h-3 w-3 mr-1" /> 10:35:00
+                <div>
+                  <h5 className="font-bold text-[#e2f1ea] text-sm mb-1">Receipt Printer Jam</h5>
+                  <p className="text-xs text-[#78a390] mb-3">Westside Mall terminal is degraded. Technician recommended.</p>
+                  <div className="flex items-center text-xs text-[#5d8573] font-mono">
+                    <Clock className="w-3 h-3 mr-1" /> 09:15 AM
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-[#0a241c] border border-[#133c2e] p-5 rounded-2xl flex gap-4 transition-colors">
+                <div className="bg-[#241e17] border border-amber-900/40 p-2.5 rounded-xl h-max">
+                  <Activity className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <h5 className="font-bold text-[#e2f1ea] text-sm mb-1">Network Latency</h5>
+                  <p className="text-xs text-[#78a390] mb-3">South Park Branch responding slowly (500ms).</p>
+                  <div className="flex items-center text-xs text-[#5d8573] font-mono">
+                    <Clock className="w-3 h-3 mr-1" /> 08:42 AM
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
       </div>
     </div>
   );
