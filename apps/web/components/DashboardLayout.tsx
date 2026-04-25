@@ -25,9 +25,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-[#061814] text-[#e2f1ea] font-sans overflow-hidden">
       <Sidebar />
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto overflow-x-hidden bg-[#03110d]">
         <Header />
-        {children}
+        <div className={`flex-1 ${pathname === '/live-map' ? '' : 'pb-4'}`}>
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -42,12 +42,30 @@ function MapContent() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [nearbyATMs, setNearbyATMs] = useState<(RegionMarker & { distance: number })[]>([]);
   const [isLocating, setIsLocating] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatHistory, setChatHistory] = useState<{role: 'user'|'ai', text: string}[]>([]);
   const searchParams = useSearchParams();
   const { role } = useAuth();
 
   React.useEffect(() => {
     setShowAIChatPanel(false);
+    setChatHistory([]);
   }, [selectedRegion]);
+
+  const handleSendMessage = (overrideText?: string | React.MouseEvent | React.KeyboardEvent) => {
+    const textToSend = typeof overrideText === 'string' ? overrideText : chatMessage;
+    if (!textToSend.trim()) return;
+    setChatHistory(prev => [...prev, { role: 'user', text: textToSend }]);
+    if (typeof overrideText !== 'string') {
+      setChatMessage("");
+    }
+    setTimeout(() => {
+       setChatHistory(prev => [...prev, { 
+         role: 'ai', 
+         text: `I've registered your input regarding ${selectedRegion?.name}. Based on predictive patterns, no immediate critical action is strictly necessary, but I've updated the observation log with your query: "${textToSend}"`
+       }]);
+    }, 1200);
+  };
 
   const markers: RegionMarker[] = [
     { 
@@ -159,7 +177,7 @@ function MapContent() {
       </div>
 
       {/* Floating Header UI overlay - No Pointer Events on wrapper so map clicks aren't blocked */}
-      <div className={`absolute top-0 left-0 w-full z-[5] p-6 pointer-events-none flex justify-between items-start transition-all duration-500 ${selectedRegion ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
+      <div className={`absolute top-0 left-0 w-full z-[5] p-4 sm:p-6 pointer-events-none flex flex-col sm:flex-row justify-between items-start gap-4 transition-all duration-500 ${selectedRegion ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
         <div className="pointer-events-auto bg-[#071a14]/90 backdrop-blur-md p-4 rounded-2xl border border-[#133c2e] shadow-2xl flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-[#e2f1ea] tracking-tight flex items-center">
             Satellite Mode
@@ -269,21 +287,42 @@ function MapContent() {
                     </div>
                   )}
 
-                  {/* Fake User History Bubble */}
-                   <div className="bg-[#12382c] border border-[#1c5542] p-4 rounded-2xl rounded-tr-sm self-end inline-block ml-auto text-[#9de1b9] shadow-lg text-[13px] font-mono mt-6 w-max max-w-[85%] text-right float-right clear-both">
-                      What are the backup nodes nearby?
-                   </div>
+                   {/* Suggested Queries */}
+                   {chatHistory.length === 0 && (
+                     <div className="flex flex-col gap-2 mt-6 pb-4 clear-both w-full">
+                       <span className="text-[10px] text-[#5d8573] uppercase tracking-widest pl-1 mb-1">Suggested Queries:</span>
+                       <div className="flex flex-wrap gap-2">
+                         {[
+                           "What are the backup nodes nearby?", 
+                           "Analyze transaction velocity", 
+                           "Predict weekend cash depletion"
+                         ].map((q, idx) => (
+                           <button 
+                             key={idx}
+                             onClick={() => handleSendMessage(q)}
+                             className="bg-[#0a241c] hover:bg-[#12382c] border border-[#133c2e] hover:border-[#1c5542] text-[#78a390] hover:text-[#9de1b9] px-3 py-2 rounded-xl text-xs transition-colors text-left font-mono"
+                           >
+                             {q}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                   )}
 
-                   {/* AI Follow-up Bubble */}
-                   <div className="bg-[#0a241c] border border-[#1c5542] p-5 rounded-2xl rounded-tl-sm self-start inline-block w-[90%] text-[#e2f1ea] shadow-lg text-[13px] font-mono leading-relaxed relative mt-2 float-left clear-both">
-                      <div className="absolute -left-2 top-0 w-2 h-2 rounded-full bg-[#9de1b9] shadow-[0_0_8px_#9de1b9]"></div>
-                      <strong className="text-[#9de1b9] flex items-center gap-2 mb-3 border-b border-[#133c2e] pb-2 font-sans tracking-tight text-sm"><BrainCircuit className="w-4 h-4"/> NEXUS AI ANALYSIS</strong>
-                      Based on current topography, the nearest operational equivalents are:<br/><br/>
-                      1. <strong className="font-sans text-[#e2f1ea]">Navoi Vault</strong> (34km away) - <span className="text-[#9de1b9]">Optimal / 65% capacity</span><br/>
-                      2. <strong className="font-sans text-[#e2f1ea]">Route Beta Mobile Hub</strong> - <span className="text-amber-400">In Transit (ETA 40m)</span><br/><br/>
-                      Would you like to auto-re-route incoming requests to these nodes?
-                   </div>
-
+                   {/* Dynamic User/AI Chat Mapping */}
+                   {chatHistory.map((msg, i) => (
+                     msg.role === 'user' ? (
+                       <div key={i} className="bg-[#12382c] border border-[#1c5542] p-4 rounded-2xl rounded-tr-sm self-end inline-block ml-auto text-[#9de1b9] shadow-lg text-[13px] font-mono mt-4 w-max max-w-[85%] text-right float-right clear-both break-words">
+                          {msg.text}
+                       </div>
+                     ) : (
+                       <div key={i} className="bg-[#0a241c] border border-[#1c5542] p-5 rounded-2xl rounded-tl-sm self-start inline-block w-[90%] text-[#e2f1ea] shadow-lg text-[13px] font-mono leading-relaxed relative mt-4 float-left clear-both break-words">
+                          <div className="absolute -left-2 top-0 w-2 h-2 rounded-full bg-[#9de1b9] shadow-[0_0_8px_#9de1b9]"></div>
+                          <strong className="text-[#9de1b9] flex items-center gap-2 mb-3 border-b border-[#133c2e] pb-2 font-sans tracking-tight text-sm"><BrainCircuit className="w-4 h-4"/> NEXUS AI</strong>
+                          {msg.text}
+                       </div>
+                     )
+                   ))}
                 </div>
 
                 {/* Pinned Embedded Chat Input Box */}
@@ -291,10 +330,15 @@ function MapContent() {
                    <div className="relative">
                      <input 
                        type="text" 
+                       value={chatMessage}
+                       onChange={(e) => setChatMessage(e.target.value)}
+                       onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                        className="w-full bg-[#03110d] border border-[#133c2e] p-4 rounded-2xl text-[#e2f1ea] pr-14 focus:outline-none focus:border-[#9de1b9] focus:ring-1 focus:ring-[#9de1b9] placeholder-[#5d8573] font-sans text-[13px] transition-all shadow-inner" 
                        placeholder="Ask Nexus AI about this node..." 
                      />
-                     <button className="absolute right-2 top-2 p-2 bg-[#12382c] border border-[#1c5542] rounded-xl text-[#9de1b9] hover:bg-[#1a4a3a] transition-colors shadow-lg">
+                     <button 
+                       onClick={handleSendMessage}
+                       className="absolute right-2 top-2 p-2 bg-[#12382c] border border-[#1c5542] rounded-xl text-[#9de1b9] hover:bg-[#1a4a3a] transition-colors shadow-lg">
                         <ChevronRight size={18} />
                      </button>
                    </div>

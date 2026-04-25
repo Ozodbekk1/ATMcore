@@ -17,8 +17,8 @@ export default function AuthPage() {
     // In a real application, you would send this to the backend API here.
     // Since this is frontend-only, we mock the role-based auth.
     let selectedRole: Role = 'user';
-    if (mode === 'register' && data.role) {
-       selectedRole = data.role as Role;
+    if (mode === 'register') {
+       selectedRole = 'user';
     } else {
        // Simple mock logic for Login to assign role based on email input
        if (data.email.includes('super')) selectedRole = 'superadmin';
@@ -39,9 +39,18 @@ export default function AuthPage() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#9de1b9]/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <div className="w-full max-w-md bg-[#071a14]/90 backdrop-blur-xl border border-[#133c2e] rounded-3xl shadow-[0_0_50px_rgba(3,17,13,0.8)] p-8 relative z-10 transition-all">
-        <div className="flex justify-center mb-6">
-          <div className="bg-[#0a241c] p-4 rounded-2xl border border-[#1c5542] shadow-[0_0_20px_#133c2e]">
-            {mode === 'login' ? <Lock className="w-8 h-8 text-[#9de1b9]" /> : <ShieldCheck className="w-8 h-8 text-[#9de1b9]" />}
+        <div className="flex justify-center mb-8 relative">
+          {/* Premium Ambient Glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-[#9de1b9] blur-[40px] opacity-20 pointer-events-none"></div>
+          
+          {/* Glassmorphism Icon Wrapper */}
+          <div className="bg-gradient-to-br from-[#0a241c] to-[#03110d] p-4 rounded-2xl border border-[#1c5542]/70 shadow-[0_15px_35px_rgba(0,0,0,0.5),_inset_0_1px_1px_rgba(157,225,185,0.1)] relative z-10 transform transition-transform duration-500 hover:scale-[1.03]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="/logo.png" 
+              alt="ATM Core Logo" 
+              className="w-16 h-16 object-contain filter brightness-[1.05] contrast-[1.05]" 
+            />
           </div>
         </div>
 
@@ -105,19 +114,7 @@ export default function AuthPage() {
             {errors.password && <span className="text-[#fb7185] text-xs ml-1 mt-1 block">Minimum 6 characters required</span>}
           </div>
 
-          {mode === 'register' && (
-            <div>
-              <label className="block text-xs font-bold text-[#5d8573] uppercase tracking-wider mb-1.5 ml-1">Requested Role</label>
-              <select
-                {...register('role', { required: mode === 'register' })}
-                className="w-full bg-[#04120e] border border-[#133c2e] rounded-xl px-4 py-3 text-[#e2f1ea] focus:outline-none focus:border-[#9de1b9] focus:ring-1 focus:ring-[#9de1b9] transition-all appearance-none"
-              >
-                <option value="user">User (Map View Only)</option>
-                <option value="admin">System Admin</option>
-                <option value="superadmin">Super Administrator</option>
-              </select>
-            </div>
-          )}
+          {/* Role selection removed: All new registrations force 'user' role automatically */}
 
           <div className="pt-4">
             <button
