@@ -1,30 +1,14 @@
-import { Button } from "@repo/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/card";
+import { Button } from '@repo/ui/button'
+import React from 'react'
 
-export default function Page() {
+const page = () => {
   return (
-    <main className="mx-auto flex min-h-screen max-w-xl items-center p-6">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Web</CardTitle>
-          <CardDescription>Shared components from `@repo/ui`.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            This button comes from the reusable UI package.
-          </p>
-        </CardContent>
-        <CardFooter className="justify-end">
-          <Button>Click me</Button>
-        </CardFooter>
-      </Card>
-    </main>
-  );
+    <div className='bg-background p-4'>
+      <h1 className='text-white'>Hello World</h1>
+      <p className='text-gray-400'>This is a simple page.</p>
+      <Button variant={"outline"}>Click me</Button>
+    </div>
+  )
 }
+
+export default page
