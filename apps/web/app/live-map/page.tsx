@@ -241,7 +241,7 @@ function MapContent() {
                   <p className={`text-lg font-bold ${selectedRegion.details.dailyTrend.startsWith('+') ? 'text-[#9de1b9]' : 'text-[#fb7185]'}`}>{selectedRegion.details.dailyTrend}</p>
                 </div>
               </div>
-              {(role === 'admin' || role === 'superadmin') && (
+              {(role === 'ADMIN' || role === 'SUPERADMIN') && (
                 <button 
                   onClick={() => setShowAIChatPanel(!showAIChatPanel)}
                   className="mt-4 w-full bg-[#12382c]/80 hover:bg-[#1a4a3a] border border-[#1c5542] text-[#9de1b9] py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors shadow-[0_0_15px_rgba(18,56,44,0.4)]"

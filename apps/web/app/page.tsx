@@ -21,7 +21,7 @@ import { useAuth } from '../components/AuthContext';
 
 export default function ATMPlatform() {
   const { role } = useAuth();
-  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
 
   const atms = [
     { name: "Downtown Financial District", cash: "85%", rawCash: 85, status: "optimal", location: "Main Street Branch" },

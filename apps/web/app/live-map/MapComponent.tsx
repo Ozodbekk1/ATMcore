@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
-// @ts-expect-error missing leaflet
+
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RegionMarker } from './page';

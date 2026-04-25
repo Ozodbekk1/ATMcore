@@ -18,10 +18,10 @@ import {
 
 export default function AdminPanelPage() {
   const { role } = useAuth();
-  const isSuper = role === 'superadmin';
+  const isSuper = role === 'SUPERADMIN';
   const [activeTab, setActiveTab] = useState<'network' | 'dispatch' | 'users' | 'logs'>('network');
 
-  if (role !== 'admin' && role !== 'superadmin') {
+  if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
     return <div className="p-8 text-[#fb7185] font-mono tracking-widest uppercase">Unauthorized Access</div>;
   }
 
