@@ -9,7 +9,7 @@ export default function SettingsPage() {
   const [darkMode, setDarkMode] = useState(true);
 
   return (
-    <div className="p-8 max-w-5xl mx-auto min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d]">
+    <div className="p-4 sm:p-8 pb-8 sm:pb-12 max-w-5xl mx-auto min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d]">
       <h1 className="text-3xl font-bold mb-8 text-[#9de1b9] tracking-tight">System Settings</h1>
       
       <div className="flex flex-col md:flex-row gap-8">

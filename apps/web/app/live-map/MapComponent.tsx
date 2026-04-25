@@ -107,10 +107,10 @@ const MMarker = Marker as any;
 function MapController({ region, userLocation, onMapClick }: { region: RegionMarker | null, userLocation?: [number, number] | null, onMapClick: () => void }) {
   const map = useMap();
   useEffect(() => {
-    if (userLocation) {
-      map.flyTo(userLocation, 12, { duration: 1.5 });
-    } else if (region) {
+    if (region) {
       map.flyTo(region.coords, 10, { duration: 1.5 });
+    } else if (userLocation) {
+      map.flyTo(userLocation, 12, { duration: 1.5 });
     }
   }, [region, userLocation, map]);
   useMapEvents({

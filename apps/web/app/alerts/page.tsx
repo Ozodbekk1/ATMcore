@@ -102,7 +102,7 @@ export default function AlertsPage() {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] flex flex-col">
+    <div className="p-4 sm:p-8 pb-8 sm:pb-12 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-8 border-b border-[#133c2e] pb-6">
         <div>
           <h1 className="text-3xl font-bold mb-2 tracking-tight flex items-center gap-3">
@@ -115,7 +115,7 @@ export default function AlertsPage() {
           </h1>
           <p className="text-[#78a390]">Monitor, filter, and resolve network anomalies and hardware events.</p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5d8573]" />
             <input 

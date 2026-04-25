@@ -29,7 +29,7 @@ export default function ATMPlatform() {
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] space-y-8">
+    <div className="p-4 sm:p-8 pb-8 sm:pb-12 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] space-y-8">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 border-b border-[#133c2e] pb-6">
@@ -39,7 +39,7 @@ export default function ATMPlatform() {
             {isAdmin ? 'Daily snapshot of ATM operations and active network status.' : 'Find active ATMs and check network status.'}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
           <Link href="/live-map" className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors flex items-center gap-2">
             <BarChart3 className="w-4 h-4" /> Live Map
           </Link>
