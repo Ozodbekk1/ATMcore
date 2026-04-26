@@ -15,6 +15,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ data: prediction });
   } catch (error: any) {
     console.error('Prediction Error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    const msg = error?.message || 'Internal Server Error';
+
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+      return NextResponse.json(
+        { error: 'AI quota exceeded (free tier: 20 req/day). Try again later or upgrade the API key.' },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -273,25 +273,7 @@ function MapContent() {
                 {/* Chat History View */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-[#133c2e]">
                   
-                  {/* AI Intro Bubble */}
-                  <div className="bg-[#0a241c] border border-[#1c5542] p-5 rounded-2xl rounded-tl-sm self-start inline-block w-[90%] text-[#e2f1ea] shadow-lg text-[13px] font-mono leading-relaxed relative">
-                     <div className="absolute -left-2 top-0 w-2 h-2 rounded-full bg-[#9de1b9] shadow-[0_0_8px_#9de1b9]"></div>
-                     <strong className="text-[#9de1b9] flex items-center gap-2 mb-3 border-b border-[#133c2e] pb-2 font-sans tracking-tight text-sm"><BrainCircuit className="w-4 h-4"/> NEXUS AI ANALYSIS</strong>
-                     I have performed a deep-scan on the transaction flow for <strong className="text-[#9de1b9] font-sans">{selectedRegion.name}</strong>.<br/><br/>
-                     Current node uptime is <strong className="font-sans text-[#e2f1ea]">{selectedRegion.details.uptime}</strong> with <strong className="font-sans text-[#e2f1ea]">{selectedRegion.details.mahallas.length}</strong> active terminals in this zone.
-                  </div>
-
-                  {/* AI Status Conclusion */}
-                  <div className="bg-[#0a241c] border border-[#1c5542] p-5 rounded-2xl rounded-tl-sm self-start inline-block w-[90%] text-[#e2f1ea] shadow-lg text-[13px] font-mono leading-relaxed mt-2">
-                     {selectedRegion.status === 'optimal' 
-                       ? <span className="text-[#9de1b9] block"><strong className="font-sans">SYSTEM OPTIMAL:</strong> No immediate cash fill required. Predictive models suggest a holding pattern is safe.</span>
-                       : selectedRegion.status === 'warning'
-                       ? <span className="text-amber-400 block"><strong className="font-sans">WARNING DETECTED:</strong> High transaction velocity (<strong>{selectedRegion.details.dailyTrend} trend</strong>) suggests depletion risk. Pre-fill recommended.</span>
-                       : <span className="text-[#fb7185] block"><strong className="font-sans">CRITICAL PRIORITY:</strong> Immediate dispatch required! Cash levels at <strong>{selectedRegion.cash}</strong>.</span>
-                     }
-                  </div>
-
-                   {/* Suggested Queries */}
+                  {/* Suggested Queries */}
                    {chatHistory.length === 0 && (
                      <div className="flex flex-col gap-2 mt-6 pb-4 clear-both w-full">
                        <span className="text-[10px] text-[#5d8573] uppercase tracking-widest pl-1 mb-1">Suggested Queries:</span>
