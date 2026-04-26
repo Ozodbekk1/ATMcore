@@ -1,37 +1,175 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { BarChart2, Loader2, AlertTriangle, RefreshCw, TrendingUp, TrendingDown, MapPin, Lightbulb, ShieldAlert, Activity, Truck, Calendar } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Loader2, AlertTriangle, RefreshCw, TrendingUp, TrendingDown, MapPin, Lightbulb, ShieldAlert, Activity, Truck, Calendar, Sparkles, Terminal } from 'lucide-react';
 import { fetchAnalytics, type AnalyticsReport } from '../../lib/api';
 
 export default function AnalyticsPage() {
   const [report, setReport] = useState<AnalyticsReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamStatus, setStreamStatus] = useState('');
+  const [streamText, setStreamText] = useState('');
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const streamRef = useRef<HTMLPreElement>(null);
 
-  const loadAnalytics = async () => {
+  // Process an SSE stream response
+  const processStream = useCallback(async (res: Response) => {
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          switch (event.type) {
+            case 'status':
+              setStreamStatus(event.message);
+              break;
+            case 'chunk':
+              setStreamText(prev => prev + event.text);
+              if (streamRef.current) streamRef.current.scrollTop = streamRef.current.scrollHeight;
+              break;
+            case 'complete':
+              setReport(event.data);
+              setIsStreaming(false);
+              setStreamText('');
+              break;
+            case 'error':
+              setStreamError(event.message);
+              setStreamStatus('AI analysis failed');
+              break;
+          }
+        } catch {}
+      }
+    }
+  }, []);
+
+  // Initial load — always returns DB data (no AI call)
+  const loadAnalytics = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchAnalytics();
-      setReport(res.data);
+      const res = await fetch('/api/analytics', { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      setReport(data.data);
     } catch (err: any) {
       setError(err.message || 'Failed to load analytics');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Regenerate — forces fresh AI call, always streams
+  const regenerateReport = useCallback(async () => {
+    setReport(null);
+    setError(null);
+    setIsStreaming(true);
+    setStreamText('');
+    setStreamStatus('Clearing cache...');
+    setStreamError(null);
+    try {
+      const res = await fetch('/api/analytics?force=true', { credentials: 'include' });
+      await processStream(res);
+    } catch (err: any) {
+      setError(err.message || 'Failed to regenerate report');
+      setIsStreaming(false);
+    }
+  }, [processStream]);
 
   useEffect(() => {
     loadAnalytics();
-  }, []);
+  }, [loadAnalytics]);
+
+  // Streaming UI
+  if (isStreaming) {
+    return (
+      <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6 text-[#e2f1ea] bg-[#03110d] min-h-[calc(100vh-80px)]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-[#133c2e] pb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-[#e2f1ea] mb-2 tracking-tight">Network Analytics</h2>
+            <p className="text-[#78a390]">AI-powered performance analysis and network insights</p>
+          </div>
+        </div>
+
+        <div className="bg-[#0a241c] border border-[#1c5542] rounded-2xl overflow-hidden shadow-2xl">
+          {/* Terminal header */}
+          <div className="flex items-center gap-3 px-5 py-3 bg-[#04120e] border-b border-[#133c2e]">
+            <div className="flex gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-[#fb7185]" />
+              <span className="w-3 h-3 rounded-full bg-amber-400" />
+              <span className="w-3 h-3 rounded-full bg-[#9de1b9]" />
+            </div>
+            <div className="flex items-center gap-2 ml-2">
+              <Terminal className="w-4 h-4 text-[#5d8573]" />
+              <span className="text-xs font-mono text-[#5d8573]">AI Analysis Engine</span>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9de1b9] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#9de1b9]" />
+              </span>
+              <span className="text-xs font-mono text-[#9de1b9]">LIVE</span>
+            </div>
+          </div>
+
+          {/* Status bar */}
+          <div className={`px-5 py-3 border-b border-[#133c2e]/50 flex items-center gap-3 ${streamError ? 'bg-[#1f1115]' : 'bg-[#071a14]'}`}>
+            {streamError ? <AlertTriangle className="w-4 h-4 text-[#fb7185]" /> : <Sparkles className="w-4 h-4 text-[#9de1b9] animate-pulse" />}
+            <span className={`text-sm font-mono ${streamError ? 'text-[#fb7185]' : 'text-[#9de1b9]'}`}>{streamStatus}</span>
+            {!streamError && <Loader2 className="w-4 h-4 animate-spin text-[#5d8573] ml-auto" />}
+          </div>
+
+          {/* Streaming output or error */}
+          {streamError ? (
+            <div className="p-6 flex flex-col items-center gap-4">
+              <p className="text-sm text-[#fb7185]/80 font-mono text-center max-w-lg leading-relaxed">
+                {streamError.includes('429') || streamError.includes('quota')
+                  ? 'Gemini API quota exceeded (free tier: 20 requests/day). Wait for quota reset or upgrade your API key.'
+                  : streamError}
+              </p>
+              <button onClick={regenerateReport} className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" /> Retry AI Analysis
+              </button>
+            </div>
+          ) : (
+            <pre
+              ref={streamRef}
+              className="p-5 text-xs font-mono text-[#78a390] leading-relaxed max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {streamText || <span className="text-[#5d8573] italic">Waiting for AI response...</span>}
+              <span className="inline-block w-2 h-4 bg-[#9de1b9] ml-0.5 animate-pulse" />
+            </pre>
+          )}
+
+          {/* Footer */}
+          <div className="px-5 py-2.5 border-t border-[#133c2e]/50 bg-[#04120e] flex items-center justify-between">
+            <span className="text-[10px] font-mono text-[#5d8573]">
+              {streamError ? 'Error' : streamText.length > 0 ? `${streamText.length} chars received` : 'Connecting...'}
+            </span>
+            <span className="text-[10px] font-mono text-[#5d8573]">Gemini AI</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] bg-[#03110d]">
         <div className="flex flex-col items-center gap-4 text-[#9de1b9]">
           <Loader2 className="w-8 h-8 animate-spin" />
-          <span className="font-mono text-sm tracking-widest uppercase">Generating AI Analytics Report...</span>
-          <span className="text-xs text-[#5d8573]">This may take 10-30 seconds</span>
+          <span className="font-mono text-sm tracking-widest uppercase">Loading Analytics...</span>
         </div>
       </div>
     );
@@ -50,8 +188,8 @@ export default function AnalyticsPage() {
           <AlertTriangle className="h-12 w-12 text-[#fb7185] mb-4" />
           <h3 className="text-lg font-bold text-[#e2f1ea] mb-2">Failed to Load Analytics</h3>
           <p className="text-sm text-[#78a390] mb-4 max-w-md text-center">{error}</p>
-          <button onClick={loadAnalytics} className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
-            <RefreshCw className="w-4 h-4" /> Retry
+          <button onClick={regenerateReport} className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" /> Retry with AI
           </button>
         </div>
       </div>
@@ -67,8 +205,8 @@ export default function AnalyticsPage() {
           <h2 className="text-3xl font-bold text-[#e2f1ea] mb-2 tracking-tight">Network Analytics</h2>
           <p className="text-[#78a390]">AI-powered performance analysis and network insights</p>
         </div>
-        <button onClick={loadAnalytics} className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" /> Regenerate Report
+        <button onClick={regenerateReport} className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2">
+          <Sparkles className="w-4 h-4" /> Regenerate Report
         </button>
       </div>
 
