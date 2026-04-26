@@ -42,7 +42,6 @@ export function Sidebar() {
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-widest text-[#e2f1ea] uppercase">ATM CORE</h1>
-            <p className="text-[11px] text-[#9de1b9] font-medium tracking-wider">v2.1.1</p>
           </div>
         </div>
 
@@ -107,11 +106,10 @@ function NavItem({
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${
-        active
+      className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${active
           ? "bg-[#9de1b9] text-[#071a14] shadow-md"
           : "text-[#78a390] hover:bg-[#0e3227] hover:text-[#e2f1ea]"
-      }`}
+        }`}
     >
       <div className="flex items-center gap-3">
         <div
@@ -123,9 +121,8 @@ function NavItem({
       </div>
       {badge && (
         <span
-          className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-            active ? "bg-[#071a14] text-[#9de1b9]" : "bg-[#133c2e] text-[#9de1b9]"
-          }`}
+          className={`text-xs font-bold px-2 py-0.5 rounded-full ${active ? "bg-[#071a14] text-[#9de1b9]" : "bg-[#133c2e] text-[#9de1b9]"
+            }`}
         >
           {badge}
         </span>

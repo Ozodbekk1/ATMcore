@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from 'react';
-import { Route as RouteIcon, Truck, Map, CheckCircle2, Search, Filter, Clock, MapPin, Wrench, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Route as RouteIcon, Truck, Map, CheckCircle2, Search, Filter, Clock, MapPin, Wrench, ShieldAlert, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { useBadges, defaultBadges } from '../../components/BadgeContext';
+import { fetchOptimizedRoutes, fetchAtmList, type OptimizedRoute, type AtmData } from '../../lib/api';
 
 type RouteType = 'refill' | 'maintenance' | 'emergency';
 type RouteStatus = 'pending' | 'dispatched' | 'in-progress' | 'completed';
@@ -21,75 +22,102 @@ interface TransportRoute {
   progress: number;
   estimatedCompletion: string;
   stops: RouteStop[];
+  totalDistance: number;
+  priorityScore: number;
 }
 
-const initialRoutes: TransportRoute[] = [
-  {
-    id: 'RTA-01',
-    name: 'North Node - Cash Replenishment',
-    driver: 'M. Tursunov',
-    vehicle: 'Armored TS-04',
-    type: 'refill',
-    status: 'in-progress',
-    progress: 65,
-    estimatedCompletion: '14:30',
-    stops: [
-      { name: 'Tashkent Hub', status: 'completed' },
-      { name: 'Chilonzor 9-kv', status: 'completed' },
-      { name: 'Sirg\'ali 7A', status: 'pending' },
-      { name: 'Nukus Terminal', status: 'pending' }
-    ]
-  },
-  {
-    id: 'RTB-02',
-    name: 'Central Sector - System Diagnostics',
-    driver: 'S. Jalilov (Tech)',
-    vehicle: 'Service SV-12',
-    type: 'maintenance',
-    status: 'dispatched',
-    progress: 10,
-    estimatedCompletion: '16:00',
-    stops: [
-      { name: 'Airport Terminal 3', status: 'pending' }
-    ]
-  },
-  {
-    id: 'RTC-03',
-    name: 'Eastern Valley - Standard Refill',
-    driver: 'K. Alimov',
-    vehicle: 'Armored TS-01',
-    type: 'refill',
-    status: 'completed',
-    progress: 100,
-    estimatedCompletion: 'Finished 11:45',
-    stops: [
-      { name: 'Samarkand Core', status: 'completed' },
-      { name: 'Bukhara Point', status: 'completed' }
-    ]
-  },
-  {
-    id: 'RTD-04',
-    name: 'Southern Gateway - Priority Escort',
-    driver: 'D. Karimov',
-    vehicle: 'Armored TS-08',
-    type: 'emergency',
-    status: 'pending',
-    progress: 0,
-    estimatedCompletion: 'Waiting for Dispatch',
-    stops: [
-      { name: 'Termez Gateway', status: 'pending' },
-      { name: 'Navoi Vault', status: 'pending' }
-    ]
-  }
-];
+const drivers = ['M. Tursunov', 'S. Jalilov', 'K. Alimov', 'D. Karimov', 'B. Azimov', 'T. Nurov'];
+const vehicles = ['Armored TS-04', 'Service SV-12', 'Armored TS-01', 'Armored TS-08', 'Armored TS-02', 'Service SV-05'];
+
+function buildDisplayRoutes(optimized: OptimizedRoute[], atms: AtmData[]): TransportRoute[] {
+  const atmMap: Record<string, AtmData> = {};
+  atms.forEach(a => { atmMap[a.atmId] = a; });
+  
+  return optimized.map((route, idx) => {
+    const isEmergency = route.priorityScore > 80;
+    const isMaintenance = route.priorityScore < 55;
+    const type: RouteType = isEmergency ? 'emergency' : isMaintenance ? 'maintenance' : 'refill';
+    const completedCount = Math.floor(Math.random() * route.route.length);
+    
+    const stops: RouteStop[] = route.route.map((atmId, i) => ({
+      name: atmMap[atmId]?.branch || atmId,
+      status: i < completedCount ? 'completed' : 'pending',
+    }));
+
+    const progress = route.route.length > 0 ? Math.round((completedCount / route.route.length) * 100) : 0;
+    const statusMap: RouteStatus[] = ['in-progress', 'dispatched', 'pending'];
+    const status = progress === 100 ? 'completed' : statusMap[idx % 3] || 'pending';
+
+    return {
+      id: `RT-${String(idx + 1).padStart(2, '0')}`,
+      name: `Route ${String.fromCharCode(65 + idx)} - ${type === 'refill' ? 'Cash Replenishment' : type === 'maintenance' ? 'System Diagnostics' : 'Priority Escort'}`,
+      driver: drivers[idx % drivers.length],
+      vehicle: vehicles[idx % vehicles.length],
+      type,
+      status,
+      progress,
+      estimatedCompletion: progress === 100 ? 'Completed' : `${14 + idx}:${String(idx * 15 % 60).padStart(2, '0')}`,
+      stops,
+      totalDistance: route.totalDistance,
+      priorityScore: route.priorityScore,
+    };
+  });
+}
 
 export default function RoutesPage() {
-  const [routes] = useState<TransportRoute[]>(initialRoutes);
+  const [routes, setRoutes] = useState<TransportRoute[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [optimizing, setOptimizing] = useState(false);
 
   const { badges, mounted } = useBadges();
   const routesBadge = mounted ? badges.routes : defaultBadges.routes;
+
+  const loadRoutes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [optRes, atmRes] = await Promise.all([
+        fetchOptimizedRoutes(),
+        fetchAtmList(1, 200),
+      ]);
+      
+      if ((optRes.data || []).length > 0) {
+        setRoutes(buildDisplayRoutes(optRes.data, atmRes.data || []));
+      }
+    } catch (err: any) {
+      // Routes may be empty if no predictions exist yet, that's OK
+      console.log('Route optimization note:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOptimize = async () => {
+    setOptimizing(true);
+    setError(null);
+    try {
+      const [optRes, atmRes] = await Promise.all([
+        fetchOptimizedRoutes(),
+        fetchAtmList(1, 200),
+      ]);
+      
+      const newRoutes = buildDisplayRoutes(optRes.data || [], atmRes.data || []);
+      if (newRoutes.length === 0) {
+        setError('No routes generated. Run AI predictions first to build optimization data.');
+      } else {
+        setRoutes(newRoutes);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to optimize routes');
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
+  useEffect(() => { loadRoutes(); }, []);
 
   const filteredRoutes = routes.filter(r => {
     const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || r.driver.toLowerCase().includes(searchQuery.toLowerCase());
@@ -127,6 +155,17 @@ export default function RoutesPage() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] bg-[#03110d]">
+        <div className="flex flex-col items-center gap-4 text-[#9de1b9]">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="font-mono text-sm tracking-widest uppercase">Calculating Routes...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-8 pb-8 sm:pb-12 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-8 border-b border-[#133c2e] pb-6">
@@ -153,11 +192,22 @@ export default function RoutesPage() {
               className="w-full bg-[#0a241c] border border-[#133c2e] focus:border-[#9de1b9] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none transition-colors"
             />
           </div>
-          <button className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(18,56,44,0.3)] flex items-center gap-2">
-            <RouteIcon className="w-4 h-4" /> New Route
+          <button 
+            onClick={handleOptimize}
+            disabled={optimizing}
+            className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(18,56,44,0.3)] flex items-center gap-2 disabled:opacity-50"
+          >
+            {optimizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+            {optimizing ? 'Optimizing...' : 'Optimize Routes'}
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-[#241e17] border border-amber-500/30 text-amber-400 p-4 rounded-xl text-sm flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4" /> {error}
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1">
         
@@ -191,7 +241,7 @@ export default function RoutesPage() {
             <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#133c2e] rounded-2xl bg-[#0a241c]/50 h-64">
               <Map className="w-12 h-12 text-[#5d8573] mb-4" />
               <h3 className="text-lg font-bold text-[#e2f1ea] mb-2">No Routes Found</h3>
-              <p className="text-sm text-[#78a390]">Try adjusting your search criteria or filters.</p>
+              <p className="text-sm text-[#78a390] mb-4">Run AI predictions first, then click "Optimize Routes" to generate dispatch plans.</p>
             </div>
           ) : (
             filteredRoutes.map(route => {
@@ -233,7 +283,13 @@ export default function RoutesPage() {
                        </div>
                      </div>
 
-                     {/* Progress Bar Area */}
+                     {/* Distance & Priority */}
+                     <div className="flex justify-between items-center text-xs bg-[#04120e] p-2 rounded-lg border border-[#133c2e]/50">
+                       <span className="text-[#5d8573]">Distance: <strong className="text-[#e2f1ea]">{route.totalDistance.toFixed(1)} km</strong></span>
+                       <span className="text-[#5d8573]">Priority: <strong className={`${route.priorityScore > 75 ? 'text-[#fb7185]' : route.priorityScore > 55 ? 'text-amber-400' : 'text-[#9de1b9]'}`}>{route.priorityScore.toFixed(0)}/100</strong></span>
+                     </div>
+
+                     {/* Progress Bar */}
                      <div className="space-y-2">
                        <div className="flex justify-between text-xs">
                          <span className="text-[#78a390]">Route Progress</span>

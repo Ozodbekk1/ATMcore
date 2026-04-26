@@ -21,46 +21,31 @@ import { useBadges, defaultBadges } from "./BadgeContext";
 import { useAuth } from "./AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { fetchAtmList, type AtmData } from "../lib/api";
 
-const searchDatabase = [
-  { id: 1, type: "atm", name: "Tashkent Hub", detail: "Main Branch • 85% Cash (Optimal)", link: "/live-map" },
-  { id: 3, type: "atm", name: "Samarkand Core", detail: "Registon • 25% Cash (Warning)", link: "/live-map" },
-  { id: 4, type: "atm", name: "Bukhara Point", detail: "Labi Hovuz • 70% Cash (Optimal)", link: "/live-map" },
-  { id: 5, type: "atm", name: "Nukus Terminal", detail: "Markaziy Box • 5% Cash (Critical)", link: "/live-map" },
-  {
-    id: "alpha",
-    type: "route",
-    name: "Route Alpha - Cash Refill",
-    detail: "3 locations remaining",
-    link: "/routes",
-  },
-  {
-    id: "beta",
-    type: "route",
-    name: "Route Beta - Maintenance",
-    detail: "Heading to Airport Terminal 3",
-    link: "/routes",
-  },
-  {
-    id: "alert1",
-    type: "alert",
-    name: "System Malfunction",
-    detail: "Receipt printer jam at Westside",
-    link: "/alerts",
-  },
-  {
-    id: "alert2",
-    type: "alert",
-    name: "Network Latency",
-    detail: "Latency exceeding 500ms threshold",
-    link: "/alerts",
-  },
-];
+function buildSearchItems(atms: AtmData[]) {
+  return atms.map(a => {
+    const cashPercent = a.capacity > 0 ? Math.round((a.currentCash / a.capacity) * 100) : 0;
+    const statusLabel = cashPercent <= 10 ? 'Critical' : cashPercent <= 25 ? 'Warning' : 'Optimal';
+    return {
+      id: a.atmId,
+      type: 'atm' as const,
+      name: a.branch,
+      detail: `${a.atmId} • ${cashPercent}% Cash (${statusLabel})`,
+      link: '/live-map'
+    };
+  });
+}
 
 export function Header() {
   const { badges, mounted } = useBadges();
   const { clearSession, role } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [atms, setAtms] = useState<AtmData[]>([]);
+
+  useEffect(() => {
+    fetchAtmList(1, 200).then(res => setAtms(res.data || [])).catch(() => {});
+  }, []);
 
   const logout = async () => {
     setIsLoggingOut(true);
@@ -76,6 +61,9 @@ export function Header() {
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const searchDatabase = buildSearchItems(atms);
+  const onlineCount = atms.filter(a => a.status === 'ONLINE').length;
+  const totalCount = atms.length || 8;
   const wrapperRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -168,9 +156,7 @@ export function Header() {
                     className="px-4 py-3 hover:bg-[#0e3227] cursor-pointer flex items-start gap-3 transition-colors border-b border-[#133c2e]/50 last:border-0"
                   >
                     <div className="mt-0.5">
-                      {result.type === "atm" && <MapPin className="h-4 w-4 text-[#9de1b9]" />}
-                      {result.type === "route" && <Route className="h-4 w-4 text-amber-500" />}
-                      {result.type === "alert" && <AlertTriangle className="h-4 w-4 text-[#fb7185]" />}
+                      <MapPin className="h-4 w-4 text-[#9de1b9]" />
                     </div>
                     <div>
                       <h5 className="text-[#e2f1ea] text-sm font-semibold">{result.name}</h5>
@@ -226,7 +212,7 @@ export function Header() {
         <div className="hidden lg:flex items-center gap-6 mr-2">
           <div className="flex flex-col items-end">
             <span className="text-xs text-[#78a390]">Active ATMs</span>
-            <span className="text-sm font-semibold text-[#e2f1ea]">8/8</span>
+            <span className="text-sm font-semibold text-[#e2f1ea]">{onlineCount}/{totalCount}</span>
           </div>
           <div className="h-8 w-px bg-[#133c2e]"></div>
           <div className="flex flex-col items-end">

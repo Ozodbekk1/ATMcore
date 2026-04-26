@@ -1,11 +1,12 @@
 "use client";
-import React, { useState } from 'react';
-import { Clock, ShieldAlert, ServerCrash, WifiOff, CheckCircle2, Search, Filter, XCircle, AlertTriangle, CheckCircle, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, ShieldAlert, ServerCrash, WifiOff, CheckCircle2, Search, Filter, XCircle, AlertTriangle, CheckCircle, MapPin, Loader2, RefreshCw } from 'lucide-react';
+import { fetchAlerts, resolveAlert, type AlertData } from '../../lib/api';
 
 type AlertType = 'critical' | 'warning' | 'info';
 type AlertStatus = 'active' | 'resolved';
 
-interface Alert {
+interface DisplayAlert {
   id: string;
   title: string;
   location: string;
@@ -13,74 +14,99 @@ interface Alert {
   time: string;
   type: AlertType;
   status: AlertStatus;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.FC<any>;
+  rawData: AlertData;
 }
 
-const initialAlerts: Alert[] = [
-  {
-    id: '1',
-    title: 'Cash Outage Imminent',
-    location: 'Nukus Terminal',
-    description: 'Cash level critically low (5%). Immediate refill dispatch required to maintain operations.',
-    time: '10 mins ago',
-    type: 'critical',
-    status: 'active',
-    icon: XCircle
-  },
-  {
-    id: '2',
-    title: 'Hardware Failure',
-    location: 'Tashkent Hub (Main Branch)',
-    description: 'Receipt printer jam detected. Node functional but degraded. Technician dispatch recommended.',
-    time: '45 mins ago',
-    type: 'warning',
-    status: 'active',
-    icon: ServerCrash
-  },
-  {
-    id: '3',
-    title: 'Network Disconnect',
-    location: 'Samarkand Core',
-    description: 'Latency exceeded 800ms threshold, connection dropped 3 times in the last hour.',
-    time: '1 hr ago',
-    type: 'warning',
-    status: 'active',
-    icon: WifiOff
-  },
-  {
-    id: '4',
-    title: 'Security Anomaly',
-    location: 'Bukhara Point',
-    description: 'Unusual withdrawal frequency flagged by Nexus AI model. Possible card skimming activity.',
-    time: '2 hrs ago',
-    type: 'critical',
-    status: 'active',
-    icon: ShieldAlert
-  },
-  {
-    id: '5',
-    title: 'Routine Maintenance',
-    location: 'Navoi Vault',
-    description: 'Scheduled software update completed successfully without errors.',
-    time: 'Yesterday',
-    type: 'info',
-    status: 'resolved',
-    icon: CheckCircle2
+function mapSeverityToType(severity: string): AlertType {
+  switch (severity) {
+    case 'CRITICAL': return 'critical';
+    case 'HIGH': return 'critical';
+    case 'MEDIUM': return 'warning';
+    case 'LOW': return 'info';
+    default: return 'info';
   }
-];
+}
+
+function mapSeverityToIcon(severity: string): React.FC<any> {
+  switch (severity) {
+    case 'CRITICAL': return XCircle;
+    case 'HIGH': return ShieldAlert;
+    case 'MEDIUM': return ServerCrash;
+    case 'LOW': return CheckCircle2;
+    default: return WifiOff;
+  }
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} mins ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} hr${diffHours > 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+}
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+  const [alerts, setAlerts] = useState<DisplayAlert[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
-  const handleAcknowledge = (id: string) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'resolved' } : a));
+  const loadAlerts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchAlerts();
+      const mapped: DisplayAlert[] = (res.data || []).map(a => ({
+        id: a._id,
+        title: a.message.split('.')[0] || a.message,
+        location: a.atmId,
+        description: a.message,
+        time: timeAgo(a.triggeredAt),
+        type: mapSeverityToType(a.severity),
+        status: a.resolved ? 'resolved' : 'active',
+        icon: mapSeverityToIcon(a.severity),
+        rawData: a,
+      }));
+      setAlerts(mapped);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load alerts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  const handleAcknowledge = async (id: string) => {
+    setResolvingId(id);
+    try {
+      await resolveAlert(id);
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'resolved' } : a));
+    } catch (err: any) {
+      // Fallback: just update locally
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'resolved' } : a));
+    } finally {
+      setResolvingId(null);
+    }
   };
   
-  const handleAcknowledgeAll = () => {
+  const handleAcknowledgeAll = async () => {
+    const activeAlerts = alerts.filter(a => a.status === 'active');
     setAlerts(prev => prev.map(a => a.status === 'active' ? {...a, status: 'resolved'} : a));
+    // Try to resolve all on backend
+    for (const alert of activeAlerts) {
+      try { await resolveAlert(alert.id); } catch { /* silent */ }
+    }
   };
 
   const filteredAlerts = alerts.filter(a => {
@@ -100,6 +126,17 @@ export default function AlertsPage() {
     { id: 'warning', label: 'Warnings' },
     { id: 'resolved', label: 'Resolved' }
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] bg-[#03110d]">
+        <div className="flex flex-col items-center gap-4 text-[#9de1b9]">
+          <Loader2 className="w-8 h-8 animate-spin" />
+          <span className="font-mono text-sm tracking-widest uppercase">Loading Alerts...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-8 pb-8 sm:pb-12 max-w-7xl mx-auto w-full min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d] flex flex-col">
@@ -126,11 +163,20 @@ export default function AlertsPage() {
               className="w-full bg-[#0a241c] border border-[#133c2e] focus:border-[#9de1b9] rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none transition-colors"
             />
           </div>
+          <button onClick={loadAlerts} className="bg-[#0a241c] hover:bg-[#12382c] text-[#9de1b9] border border-[#133c2e] px-4 py-2.5 rounded-xl font-bold text-sm transition-colors">
+            <RefreshCw className="w-4 h-4" />
+          </button>
           <button onClick={handleAcknowledgeAll} disabled={activeCount === 0} className="bg-[#12382c] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-4 py-2.5 rounded-xl font-bold text-sm tracking-wide transition-colors whitespace-nowrap shadow-[0_0_15px_rgba(18,56,44,0.3)]">
             Resolve All
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-[#1f1115] border border-rose-900/30 text-[#fb7185] p-4 rounded-xl text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1">
         
@@ -171,7 +217,6 @@ export default function AlertsPage() {
               const AIcon = alert.icon;
               const isCritical = alert.type === 'critical';
               const isWarning = alert.type === 'warning';
-              const isInfo = alert.type === 'info';
               const isResolved = alert.status === 'resolved';
 
               return (
@@ -199,13 +244,14 @@ export default function AlertsPage() {
                           {!isResolved && (
                             <button 
                               onClick={() => handleAcknowledge(alert.id)}
-                              className={`shrink-0 px-4 py-2 text-xs font-bold rounded-lg border transition-colors ${
+                              disabled={resolvingId === alert.id}
+                              className={`shrink-0 px-4 py-2 text-xs font-bold rounded-lg border transition-colors disabled:opacity-50 ${
                                 isCritical ? 'border-[#fb7185]/50 bg-[#fb7185]/10 text-[#fb7185] hover:bg-[#fb7185] hover:text-[#0a241c]' : 
                                 isWarning ? 'border-amber-500/50 bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-[#0a241c]' : 
                                 'border-[#9de1b9]/50 bg-[#9de1b9]/10 text-[#9de1b9] hover:bg-[#9de1b9] hover:text-[#0a241c]'
                               }`}
                             >
-                              Resolve Issue
+                              {resolvingId === alert.id ? 'Resolving...' : 'Resolve Issue'}
                             </button>
                           )}
                           {isResolved && (
@@ -222,7 +268,7 @@ export default function AlertsPage() {
                        <div className="flex items-center text-[11px] font-mono text-[#5d8573] pt-2">
                           <Clock className="w-3 h-3 mr-1.5" /> {alert.time}
                           <span className="mx-2">•</span>
-                          ID: {alert.id.padStart(4, '0')}
+                          {alert.rawData.severity}
                        </div>
                     </div>
                   </div>
