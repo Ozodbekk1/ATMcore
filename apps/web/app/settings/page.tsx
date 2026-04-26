@@ -1,12 +1,62 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Save, Bell, Shield, Key, Eye, User } from 'lucide-react';
+import { Save, Bell, Shield, Key, Eye, User, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../components/AuthContext';
+import { updateProfile, changePassword } from '../../lib/api';
 
 export default function SettingsPage() {
+  const { user, role, refetchMe } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
+
+  // Profile form
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileEmail, setProfileEmail] = useState(user?.email || '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Password form
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      await updateProfile({ name: profileName, email: profileEmail });
+      setProfileSuccess('Profile updated successfully');
+      await refetchMe();
+    } catch (err: any) {
+      setProfileError(err.message || 'Failed to update profile');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordSaving(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    try {
+      await changePassword({ currentPassword, newPassword });
+      setPasswordSuccess('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const roleName = role === 'SUPERADMIN' ? 'System Root' : role === 'ADMIN' ? 'Administrator' : 'User';
 
   return (
     <div className="p-4 sm:p-8 pb-8 sm:pb-12 max-w-5xl mx-auto min-h-[calc(100vh-80px)] text-[#e2f1ea] bg-[#03110d]">
@@ -39,14 +89,35 @@ export default function SettingsPage() {
             <div className="space-y-6">
               <h2 className="text-xl font-bold border-b border-[#133c2e] pb-4 mb-6">Profile Settings</h2>
               
+              {profileSuccess && (
+                <div className="p-3 bg-[#12382c] border border-[#1c5542] rounded-xl text-[#9de1b9] text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> {profileSuccess}
+                </div>
+              )}
+              {profileError && (
+                <div className="p-3 bg-[#1f1115] border border-rose-900/30 rounded-xl text-[#fb7185] text-sm flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" /> {profileError}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm text-[#78a390]">Full Name</label>
-                  <input type="text" defaultValue="Admin User" className="w-full bg-[#03110d] border border-[#133c2e] rounded-xl px-4 py-3 focus:outline-none focus:border-[#9de1b9] text-[#e2f1ea] transition-colors" />
+                  <input 
+                    type="text" 
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    className="w-full bg-[#03110d] border border-[#133c2e] rounded-xl px-4 py-3 focus:outline-none focus:border-[#9de1b9] text-[#e2f1ea] transition-colors" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm text-[#78a390]">Email Address</label>
-                  <input type="email" defaultValue="admin@atmcore.uz" className="w-full bg-[#03110d] border border-[#133c2e] rounded-xl px-4 py-3 focus:outline-none focus:border-[#9de1b9] text-[#e2f1ea] transition-colors" />
+                  <input 
+                    type="email" 
+                    value={profileEmail}
+                    onChange={(e) => setProfileEmail(e.target.value)}
+                    className="w-full bg-[#03110d] border border-[#133c2e] rounded-xl px-4 py-3 focus:outline-none focus:border-[#9de1b9] text-[#e2f1ea] transition-colors" 
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm text-[#78a390]">Department</label>
@@ -55,10 +126,25 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <label className="text-sm text-[#78a390]">Roles</label>
                   <div className="flex gap-2 pt-2">
-                    <span className="bg-[#12382c] border border-[#1c5542] text-[#9de1b9] px-3 py-1 rounded-full text-xs font-mono">SuperAdmin</span>
-                    <span className="bg-[#1f1115] border border-[#fb7185]/30 text-[#fb7185] px-3 py-1 rounded-full text-xs font-mono">Root</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-mono border ${
+                      role === 'SUPERADMIN' ? 'bg-[#9de1b9]/10 text-[#9de1b9] border-[#1c5542]' :
+                      role === 'ADMIN' ? 'bg-[#12382c] text-[#9de1b9] border-[#1c5542]' :
+                      'bg-[#12382c] text-[#78a390] border-[#133c2e]'
+                    }`}>{roleName}</span>
+                    <span className="bg-[#0a241c] border border-[#133c2e] text-[#78a390] px-3 py-1 rounded-full text-xs font-mono">{role}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-[#133c2e] flex justify-end">
+                <button 
+                  onClick={handleSaveProfile}
+                  disabled={profileSaving}
+                  className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide flex items-center gap-2 transition-colors shadow-[0_0_15px_rgba(18,56,44,0.4)] disabled:opacity-50"
+                >
+                  {profileSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {profileSaving ? 'Saving...' : 'Save Profile'}
+                </button>
               </div>
             </div>
           )}
@@ -91,6 +177,54 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {activeTab === 'security' && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold border-b border-[#133c2e] pb-4 mb-6">Change Password</h2>
+              
+              {passwordSuccess && (
+                <div className="p-3 bg-[#12382c] border border-[#1c5542] rounded-xl text-[#9de1b9] text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> {passwordSuccess}
+                </div>
+              )}
+              {passwordError && (
+                <div className="p-3 bg-[#1f1115] border border-rose-900/30 rounded-xl text-[#fb7185] text-sm flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" /> {passwordError}
+                </div>
+              )}
+
+              <div className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <label className="text-sm text-[#78a390]">Current Password</label>
+                  <input 
+                    type="password" 
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#03110d] border border-[#133c2e] rounded-xl px-4 py-3 focus:outline-none focus:border-[#9de1b9] text-[#e2f1ea] transition-colors placeholder-[#1f4a38]" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[#78a390]">New Password</label>
+                  <input 
+                    type="password" 
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#03110d] border border-[#133c2e] rounded-xl px-4 py-3 focus:outline-none focus:border-[#9de1b9] text-[#e2f1ea] transition-colors placeholder-[#1f4a38]" 
+                  />
+                </div>
+                <button 
+                  onClick={handleChangePassword}
+                  disabled={passwordSaving || !currentPassword || !newPassword}
+                  className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide flex items-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {passwordSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                  {passwordSaving ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'appearance' && (
             <div className="space-y-6">
               <h2 className="text-xl font-bold border-b border-[#133c2e] pb-4 mb-6">Appearance</h2>
@@ -109,19 +243,13 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {(activeTab === 'security' || activeTab === 'api') && (
+          {activeTab === 'api' && (
             <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-[#133c2e] rounded-xl bg-[#03110d]/50">
               <Shield className="w-12 h-12 text-[#5d8573] mb-4" />
               <h3 className="text-lg font-bold text-[#e2f1ea] mb-2">Restricted Area</h3>
-              <p className="text-sm text-[#78a390] max-w-sm">You need elevated permissions to access these configurations. Contact System Administrator.</p>
+              <p className="text-sm text-[#78a390] max-w-sm">API key management requires elevated permissions. Contact System Administrator.</p>
             </div>
           )}
-
-          <div className="mt-8 pt-6 border-t border-[#133c2e] flex justify-end">
-            <button className="bg-[#12382c] hover:bg-[#1a4a3a] text-[#9de1b9] border border-[#1c5542] px-6 py-2.5 rounded-xl font-bold text-sm tracking-wide flex items-center gap-2 transition-colors shadow-[0_0_15px_rgba(18,56,44,0.4)]">
-              <Save className="w-4 h-4" /> Save Changes
-            </button>
-          </div>
         </div>
       </div>
     </div>

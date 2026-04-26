@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../components/AuthContext';
 import { 
   ShieldAlert, 
@@ -13,8 +13,14 @@ import {
   Trash2,
   Lock,
   Eye,
-  Server
+  Server,
+  Loader2,
+  RefreshCw,
+  AlertTriangle,
+  Download,
+  CheckCircle
 } from 'lucide-react';
+import { fetchAtmList, fetchAdminUsers, fetchLogs, generateTestData, type AtmData, type UserData, type LogData } from '../../lib/api';
 
 export default function AdminPanelPage() {
   const { role } = useAuth();
@@ -47,7 +53,7 @@ export default function AdminPanelPage() {
       {/* Navigation Tabs */}
       <div className="flex space-x-2 border-b border-[#133c2e] mb-8">
         <TabButton active={activeTab === 'network'} onClick={() => setActiveTab('network')} icon={<Database />} label="Network Nodes" />
-        <TabButton active={activeTab === 'dispatch'} onClick={() => setActiveTab('dispatch')} icon={<Activity />} label="Logistics Sync" />
+        <TabButton active={activeTab === 'dispatch'} onClick={() => setActiveTab('dispatch')} icon={<Activity />} label="Data Generator" />
         {isSuper && <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users />} label="Access Roster" />}
         {isSuper && <TabButton active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} icon={<Terminal />} label="System Audit" />}
       </div>
@@ -55,7 +61,7 @@ export default function AdminPanelPage() {
       {/* Content Areas */}
       <div className="min-h-[500px]">
         {activeTab === 'network' && <NetworkControl />}
-        {activeTab === 'dispatch' && <DispatchControl />}
+        {activeTab === 'dispatch' && <DataGeneratorControl />}
         {activeTab === 'users' && isSuper && <UserManagement />}
         {activeTab === 'logs' && isSuper && <SystemLogs />}
       </div>
@@ -64,9 +70,7 @@ export default function AdminPanelPage() {
   );
 }
 
-// ----------------------------------------------------
 // SUBCOMPONENTS
-// ----------------------------------------------------
 
 function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
   return (
@@ -84,8 +88,28 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
   );
 }
 
-// --- Network Control (ATMs) ---
+// --- Network Control (ATMs from API) ---
 function NetworkControl() {
+  const [atms, setAtms] = useState<AtmData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchAtmList(1, 200);
+      setAtms(res.data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-[#9de1b9]" /></div>;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-[#0a241c] p-4 rounded-2xl border border-[#133c2e]">
@@ -93,79 +117,119 @@ function NetworkControl() {
             <div className="p-3 bg-[#061814] rounded-xl"><Database className="text-[#9de1b9] w-5 h-5"/></div>
             <div>
                <h3 className="text-[#e2f1ea] font-bold">ATM Node Registry</h3>
-               <p className="text-xs text-[#78a390]">Provision, calibrate, or disable ATM terminals.</p>
+               <p className="text-xs text-[#78a390]">{atms.length} nodes registered in the system.</p>
             </div>
          </div>
-         <button className="flex items-center gap-2 bg-[#9de1b9] text-[#071a14] px-4 py-2 rounded-xl text-sm font-bold shadow-[0_0_15px_rgba(157,225,185,0.4)] hover:bg-[#b0ebd1] transition-colors">
-           <Plus className="w-4 h-4" /> Provision Node
+         <button onClick={load} className="flex items-center gap-2 bg-[#12382c] text-[#9de1b9] px-4 py-2 rounded-xl text-sm font-bold border border-[#1c5542] hover:bg-[#1a4a3a] transition-colors">
+           <RefreshCw className="w-4 h-4" /> Refresh
          </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         {/* Mock Nodes List */}
-         {[1,2,3].map(i => (
-           <div key={i} className="bg-[#04120e] border border-[#133c2e] p-5 rounded-2xl relative overflow-hidden group">
-             <div className="flex justify-between items-start mb-4">
-               <div>
-                  <div className="text-[10px] text-[#9de1b9] bg-[#12382c] px-2 py-0.5 rounded-sm inline-block font-mono tracking-widest mb-1.5">NODE-{i}00X</div>
-                  <h4 className="text-[#e2f1ea] font-medium">Regional Core {i}</h4>
-               </div>
-               <span className="w-2 h-2 rounded-full bg-[#9de1b9] shadow-[0_0_8px_#9de1b9]"></span>
-             </div>
-             
-             <div className="space-y-2 mb-6 border-b border-[#133c2e]/50 pb-4">
-                <div className="flex justify-between text-xs">
-                   <span className="text-[#5d8573]">IP Binding</span>
-                   <span className="font-mono text-[#78a390]">192.168.10.{i}5</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                   <span className="text-[#5d8573]">Capacity Limit</span>
-                   <span className="font-mono text-[#78a390]">$250,000</span>
-                </div>
-             </div>
+      {error && (
+        <div className="bg-[#1f1115] border border-rose-900/30 text-[#fb7185] p-3 rounded-xl text-sm flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> {error}
+        </div>
+      )}
 
-             <div className="flex gap-2">
-                <button className="flex-1 bg-[#12382c] text-[#9de1b9] text-xs font-semibold py-2 rounded-lg border border-[#1c5542] hover:bg-[#1a4a3a]">Calibrate</button>
-                <button className="p-2 bg-[#1f1115] text-[#fb7185] rounded-lg border border-rose-900/40 hover:bg-[#2b161c]" title="Deactivate"><Trash2 className="w-4 h-4" /></button>
-             </div>
-           </div>
-         ))}
-      </div>
+      {atms.length === 0 ? (
+        <div className="bg-[#0a241c] border border-[#133c2e] p-8 rounded-2xl text-center text-[#78a390] text-sm">
+          No ATM nodes found. Use the Data Generator tab to create test data.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+           {atms.map(atm => {
+             const cashPercent = atm.capacity > 0 ? Math.round((atm.currentCash / atm.capacity) * 100) : 0;
+             const isOnline = atm.status === 'ONLINE';
+             return (
+               <div key={atm._id} className="bg-[#04120e] border border-[#133c2e] p-5 rounded-2xl relative overflow-hidden group">
+                 <div className="flex justify-between items-start mb-4">
+                   <div>
+                      <div className="text-[10px] text-[#9de1b9] bg-[#12382c] px-2 py-0.5 rounded-sm inline-block font-mono tracking-widest mb-1.5">{atm.atmId}</div>
+                      <h4 className="text-[#e2f1ea] font-medium text-sm">{atm.branch}</h4>
+                   </div>
+                   <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-[#9de1b9] shadow-[0_0_8px_#9de1b9]' : 'bg-[#fb7185] shadow-[0_0_8px_#fb7185]'}`}></span>
+                 </div>
+                 
+                 <div className="space-y-2 mb-4 border-b border-[#133c2e]/50 pb-4">
+                    <div className="flex justify-between text-xs">
+                       <span className="text-[#5d8573]">Status</span>
+                       <span className={`font-mono font-bold ${isOnline ? 'text-[#9de1b9]' : 'text-[#fb7185]'}`}>{atm.status}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                       <span className="text-[#5d8573]">Cash Level</span>
+                       <span className={`font-mono font-bold ${cashPercent < 15 ? 'text-[#fb7185]' : cashPercent < 30 ? 'text-amber-400' : 'text-[#78a390]'}`}>{cashPercent}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#03110d] rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full ${cashPercent < 15 ? 'bg-[#fb7185]' : cashPercent < 30 ? 'bg-amber-400' : 'bg-[#9de1b9]'}`} style={{ width: `${cashPercent}%` }} />
+                    </div>
+                    <div className="flex justify-between text-xs">
+                       <span className="text-[#5d8573]">Capacity</span>
+                       <span className="font-mono text-[#78a390]">${atm.capacity.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                       <span className="text-[#5d8573]">Location</span>
+                       <span className="font-mono text-[#78a390]">{atm.location.lat.toFixed(4)}, {atm.location.lng.toFixed(4)}</span>
+                    </div>
+                 </div>
+
+                 <div className="flex gap-2">
+                    <button className="flex-1 bg-[#12382c] text-[#9de1b9] text-xs font-semibold py-2 rounded-lg border border-[#1c5542] hover:bg-[#1a4a3a]">View Details</button>
+                 </div>
+               </div>
+             );
+           })}
+        </div>
+      )}
     </div>
   );
 }
 
-// --- Logistics & Dispatch ---
-function DispatchControl() {
+// --- Data Generator ---
+function DataGeneratorControl() {
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setResult(null);
+    setError(null);
+    try {
+      const res = await generateTestData();
+      setResult(`Successfully generated: ${res.counts?.atms || 0} ATMs, ${res.counts?.transactions || 0} transactions, ${res.counts?.alerts || 0} alerts, ${res.counts?.logs || 0} logs`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate data');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
        <div className="bg-[#0a241c] p-6 rounded-2xl border border-[#133c2e]">
-          <h3 className="text-lg font-bold text-[#e2f1ea] mb-4">Fleet & Route Assignments</h3>
-          <p className="text-sm text-[#78a390] mb-6">Assign armored transport schedules and adjust logic boundaries for AI predictions.</p>
+          <h3 className="text-lg font-bold text-[#e2f1ea] mb-4">Test Data Generator</h3>
+          <p className="text-sm text-[#78a390] mb-6">Generate realistic ATM, transaction, alert, and log data for testing. This populates the database with 20 ATMs across 8 Uzbekistan regions with 30 days of transaction history.</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="p-4 bg-[#04120e] rounded-xl border border-[#133c2e]">
-                <h4 className="text-[#9de1b9] font-mono text-xs uppercase mb-3 border-b border-[#133c2e] pb-2">Active Protocols</h4>
-                <div className="space-y-3">
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-[#e2f1ea]">Dynamic Routing AI</span>
-                     <div className="w-10 h-5 bg-[#9de1b9] rounded-full relative"><div className="absolute right-1 top-1 w-3 h-3 bg-[#071a14] rounded-full"></div></div>
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-[#e2f1ea]">Predictive Pre-Fill</span>
-                     <div className="w-10 h-5 bg-[#9de1b9] rounded-full relative"><div className="absolute right-1 top-1 w-3 h-3 bg-[#071a14] rounded-full"></div></div>
-                   </div>
-                </div>
-             </div>
-             
-             <div className="p-4 bg-[#04120e] border border-amber-900/30 rounded-xl relative overflow-hidden">
-                <h4 className="text-amber-400 font-mono text-xs uppercase mb-3 border-b border-amber-900/30 pb-2">Emergency Override</h4>
-                <p className="text-xs text-amber-200/60 mb-4">Manually seize control of route distribution to bypass AI.</p>
-                <button className="w-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold py-2 rounded-lg text-sm hover:bg-amber-500/20 transition-all">
-                  Initiate Manual Sync
-                </button>
-             </div>
-          </div>
+          {result && (
+            <div className="mb-4 p-4 bg-[#12382c] border border-[#1c5542] rounded-xl text-[#9de1b9] text-sm flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" /> {result}
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 p-4 bg-[#1f1115] border border-rose-900/30 rounded-xl text-[#fb7185] text-sm flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> {error}
+            </div>
+          )}
+
+          <button 
+            onClick={handleGenerate} 
+            disabled={generating}
+            className="bg-[#9de1b9] text-[#071a14] px-6 py-3 rounded-xl font-bold text-sm shadow-[0_0_15px_rgba(157,225,185,0.4)] hover:bg-[#b0ebd1] transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {generating ? 'Generating Data...' : 'Generate Test Data'}
+          </button>
        </div>
     </div>
   );
@@ -173,75 +237,150 @@ function DispatchControl() {
 
 // --- User Management (Superadmin Only) ---
 function UserManagement() {
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchAdminUsers();
+      setUsers(res.data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-[#9de1b9]" /></div>;
+
   return (
     <div className="space-y-6">
        <div className="flex justify-between items-center mb-4">
          <h3 className="text-xl font-bold text-[#e2f1ea]">Access Clearance Roster</h3>
-         <button className="bg-[#12382c] border border-[#1c5542] text-[#9de1b9] px-4 py-2 rounded-xl text-sm hover:bg-[#1a4a3a]">Export List</button>
+         <button onClick={load} className="bg-[#12382c] border border-[#1c5542] text-[#9de1b9] px-4 py-2 rounded-xl text-sm hover:bg-[#1a4a3a] flex items-center gap-2">
+           <RefreshCw className="w-4 h-4" /> Refresh
+         </button>
        </div>
+
+       {error && (
+         <div className="bg-[#1f1115] border border-rose-900/30 text-[#fb7185] p-3 rounded-xl text-sm flex items-center gap-2">
+           <AlertTriangle className="w-4 h-4" /> {error}
+         </div>
+       )}
        
-       <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl overflow-hidden shadow-2xl">
-         <table className="w-full text-left border-collapse">
-           <thead>
-             <tr className="bg-[#061814] border-b border-[#133c2e]">
-               <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Operative Name</th>
-               <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Email Config</th>
-               <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Role Matrix</th>
-               <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold text-right">Actions</th>
-             </tr>
-           </thead>
-           <tbody className="divide-y divide-[#133c2e]/50 text-sm">
-             <tr className="hover:bg-[#071a14] transition-colors">
-               <td className="px-6 py-4 font-semibold text-[#e2f1ea]">Alex Morgan</td>
-               <td className="px-6 py-4 text-[#78a390] font-mono text-xs">admin@atm.uz</td>
-               <td className="px-6 py-4"><span className="bg-[#1f4a38] text-[#9de1b9] px-2 py-1 rounded text-[10px] font-bold">ADMIN</span></td>
-               <td className="px-6 py-4 text-right">
-                 <button className="text-[#5d8573] hover:text-[#9de1b9] mr-3"><Settings className="w-4 h-4 inline"/></button>
-                 <button className="text-[#5d8573] hover:text-[#fb7185]"><Lock className="w-4 h-4 inline"/></button>
-               </td>
-             </tr>
-             <tr className="hover:bg-[#071a14] transition-colors">
-               <td className="px-6 py-4 font-semibold text-[#e2f1ea]">Root Master</td>
-               <td className="px-6 py-4 text-[#78a390] font-mono text-xs">super@atm.uz</td>
-               <td className="px-6 py-4"><span className="bg-[#9de1b9] text-[#071a14] px-2 py-1 rounded text-[10px] font-bold">SUPERADMIN</span></td>
-               <td className="px-6 py-4 text-right">
-                 <button className="text-[#5d8573] hover:text-[#9de1b9] mr-3" disabled><Settings className="w-4 h-4 inline opacity-50"/></button>
-                 <button className="text-[#5d8573] hover:text-[#fb7185]" disabled><Eye className="w-4 h-4 inline opacity-50"/></button>
-               </td>
-             </tr>
-             <tr className="hover:bg-[#071a14] transition-colors">
-               <td className="px-6 py-4 font-semibold text-[#e2f1ea]">Field Tech #1</td>
-               <td className="px-6 py-4 text-[#78a390] font-mono text-xs">tech1@atm.uz</td>
-               <td className="px-6 py-4"><span className="bg-[#12382c] text-[#78a390] px-2 py-1 rounded text-[10px] font-bold">USER</span></td>
-               <td className="px-6 py-4 text-right">
-                 <button className="text-[#5d8573] hover:text-[#9de1b9] mr-3"><Settings className="w-4 h-4 inline"/></button>
-                 <button className="text-[#5d8573] hover:text-[#fb7185]"><Lock className="w-4 h-4 inline"/></button>
-               </td>
-             </tr>
-           </tbody>
-         </table>
-       </div>
+       {users.length === 0 ? (
+         <div className="bg-[#0a241c] border border-[#133c2e] p-8 rounded-2xl text-center text-[#78a390] text-sm">
+           No registered users found.
+         </div>
+       ) : (
+         <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl overflow-hidden shadow-2xl">
+           <table className="w-full text-left border-collapse">
+             <thead>
+               <tr className="bg-[#061814] border-b border-[#133c2e]">
+                 <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Operative Name</th>
+                 <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Email Config</th>
+                 <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Role Matrix</th>
+                 <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Verified</th>
+                 <th className="px-6 py-4 text-xs tracking-widest text-[#5d8573] uppercase font-bold">Joined</th>
+               </tr>
+             </thead>
+             <tbody className="divide-y divide-[#133c2e]/50 text-sm">
+               {users.map(user => (
+                 <tr key={user._id} className="hover:bg-[#071a14] transition-colors">
+                   <td className="px-6 py-4 font-semibold text-[#e2f1ea]">{user.name}</td>
+                   <td className="px-6 py-4 text-[#78a390] font-mono text-xs">{user.email}</td>
+                   <td className="px-6 py-4">
+                     <span className={`px-2 py-1 rounded text-[10px] font-bold ${
+                       user.role === 'SUPERADMIN' ? 'bg-[#9de1b9] text-[#071a14]' :
+                       user.role === 'ADMIN' ? 'bg-[#1f4a38] text-[#9de1b9]' :
+                       'bg-[#12382c] text-[#78a390]'
+                     }`}>{user.role}</span>
+                   </td>
+                   <td className="px-6 py-4">
+                     {user.isVerified ? (
+                       <span className="text-[#9de1b9] text-xs flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Yes</span>
+                     ) : (
+                       <span className="text-[#fb7185] text-xs">No</span>
+                     )}
+                   </td>
+                   <td className="px-6 py-4 text-[#5d8573] text-xs font-mono">
+                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                   </td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
+         </div>
+       )}
     </div>
   );
 }
 
 // --- System Logs (Superadmin Only) ---
 function SystemLogs() {
+  const [logs, setLogs] = useState<LogData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchLogs(50);
+      setLogs(res.data || []);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case 'CRIT': case 'ERROR': return 'text-[#fb7185]';
+      case 'WARN': return 'text-amber-400';
+      case 'AUTH': return 'text-[#78a390]';
+      case 'SYNC': return 'text-[#9de1b9]';
+      case 'NODE': return 'text-[#e2f1ea]';
+      default: return 'text-[#78a390]';
+    }
+  };
+
+  if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-[#9de1b9]" /></div>;
+
   return (
     <div className="bg-[#03110d] border border-[#133c2e] p-6 rounded-2xl font-mono text-xs shadow-inner relative">
-      <div className="absolute top-4 right-4 flex gap-2">
+      <div className="absolute top-4 right-4 flex gap-2 items-center">
          <div className="w-2 h-2 rounded-full bg-[#9de1b9] animate-pulse"></div>
          <span className="text-[#5d8573] text-[10px]">LIVE TAIL</span>
+         <button onClick={load} className="text-[#5d8573] hover:text-[#9de1b9] transition-colors ml-2"><RefreshCw className="w-3 h-3" /></button>
       </div>
       <h3 className="text-[#5d8573] uppercase mb-4 font-bold tracking-widest flex items-center gap-2"><Terminal className="w-4 h-4"/> System Execution Audit</h3>
       
-      <div className="space-y-3 font-mono">
-        <div className="text-[#78a390]"><span className="text-[#5d8573]">[12:44:03]</span> [AUTH] Validated signature for 'admin@atm.uz'</div>
-        <div className="text-[#e2f1ea]"><span className="text-[#5d8573]">[12:48:11]</span> [NODE] Admin executed bypass cache on Route Alpha</div>
-        <div className="text-amber-400"><span className="text-[#5d8573]">[12:51:30]</span> [WARN] High latency detected on socket connection (512ms)</div>
-        <div className="text-[#fb7185]"><span className="text-[#5d8573]">[12:55:01]</span> [CRIT] Unhandled route conflict in 'Nukus Terminal' dispatch</div>
-        <div className="text-[#78a390]"><span className="text-[#5d8573]">[13:02:14]</span> [AUTH] 'super@atm.uz' engaged root shell privileges</div>
-        <div className="text-[#9de1b9]"><span className="text-[#5d8573]">[13:05:44]</span> [SYNC] Database replication confirmed on standby shard</div>
+      {error && (
+        <div className="text-[#fb7185] mb-4">{error}</div>
+      )}
+
+      <div className="space-y-3 font-mono max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-[#133c2e]">
+        {logs.length === 0 ? (
+          <div className="text-[#5d8573] text-center py-8">No logs found. Generate test data first.</div>
+        ) : (
+          logs.map(log => (
+            <div key={log._id} className={`${getLevelColor(log.level)}`}>
+              <span className="text-[#5d8573]">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+              {' '}
+              <span className={`${getLevelColor(log.level)} font-bold`}>[{log.level}]</span>
+              {' '}
+              {log.source && <span className="text-[#5d8573]">({log.source})</span>}
+              {' '}{log.message}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
