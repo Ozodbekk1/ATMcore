@@ -9,16 +9,16 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 export async function predictAtmCashDemand(atmId: string) {
   try {
     await connectToDatabase();
-    
+
     // 1. Gather context
     const atmInfo = await Atm.findOne({ atmId });
     if (!atmInfo) {
       throw new Error(`ATM ${atmId} not found`);
     }
-    
+
     const features = await generateFeaturesForAtm(atmId);
     if (!features) {
-       throw new Error(`Not enough data for ATM ${atmId}`);
+      throw new Error(`Not enough data for ATM ${atmId}`);
     }
 
     // 2. Prepare Prompt
@@ -52,9 +52,9 @@ Output JSON Schema:
 `;
 
     // 3. Call Gemini
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { responseMimeType: "application/json" } });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest", generationConfig: { responseMimeType: "application/json" } });
     const result = await model.generateContent(prompt);
-    
+
     const textOutput = result.response.text();
     const parsedData = JSON.parse(textOutput);
 
@@ -65,7 +65,7 @@ Output JSON Schema:
       riskScore: parsedData.riskScore,
       confidence: parsedData.confidence,
       predictedTimeToCashout: parsedData.etaToCashOutHours,
-      modelVersion: 'gemini-2.5-flash',
+      modelVersion: 'gemini-flash-latest',
       timestamp: new Date()
     });
 

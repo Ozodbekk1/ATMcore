@@ -62,46 +62,140 @@ export async function syncAtms() {
   return apiFetch('/api/atm/sync', { method: 'POST' });
 }
 
+export async function importAtmsJson(data: { atms?: any[]; transactions?: any[] }) {
+  return apiFetch<{ success: boolean; message: string; details?: { atmsUpdated?: number; transactionsUpdated?: number } }>('/api/atm/import', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function syncAtmsFromSheets(spreadsheetId: string) {
+  return apiFetch<{ success: boolean; message: string }>('/api/atm/sync', {
+    method: 'POST',
+    body: JSON.stringify({ spreadsheetId }),
+  });
+}
+
+export async function deleteAllAtms() {
+  return apiFetch<{ success: boolean; message: string; details?: { atmsDeleted?: number; transactionsDeleted?: number } }>('/api/atm/clear', {
+    method: 'DELETE',
+  });
+}
+
 // =================== ANALYTICS ===================
 
 export interface AnalyticsReport {
-  daily_analysis: {
+  // Latest AI Structure (V2)
+  networkSize?: number;
+  executiveSummary?: string;
+  overallRecommendations?: string[];
+  highPriorityActions?: {
+    criticalUnderstocking: {
+      atmId: string;
+      issue: string;
+      action: string;
+    }[];
+    severeOverstockingAndAnomalies: {
+      atmId: string;
+      issue: string;
+      action: string;
+    }[];
+  };
+  cashOptimizationOpportunities?: {
+    category: string;
+    description: string;
+    atms: string[];
+    action: string;
+  }[];
+
+  // Previous AI Structure (V1)
+  network_summary?: {
+    total_atms_in_network: number;
+    analysis_period_days: number;
+    general_observation: string;
+    key_focus_areas: string[];
+  };
+  high_performance_atms_analysis?: {
+    description: string;
+    atms_with_immediate_attention: {
+      id: string;
+      issue: string;
+      details: string;
+      actionable_recommendation: string;
+    }[];
+    atms_with_overstocking_potential: {
+      id: string;
+      issue: string;
+      details: string;
+      actionable_recommendation: string;
+    }[];
+    general_recommendations: string;
+  };
+  low_performance_atms_analysis?: {
+    description: string;
+    atms_requiring_urgent_action: {
+      id: string;
+      issue: string;
+      details: string;
+      actionable_recommendation: string;
+    }[];
+    atms_with_cash_out_risk_despite_lower_volume: {
+      id: string;
+      issue: string;
+      details: string;
+      actionable_recommendation: string;
+    }[];
+    atms_with_overstocking_potential: {
+      id: string;
+      issue: string;
+      details: string;
+      actionable_recommendation: string;
+    }[];
+  };
+  overall_optimization_opportunities?: {
+    opportunity: string;
+    details: string;
+    impact: string;
+  }[];
+
+  // Legacy Structure
+  daily_analysis?: {
     top_high_usage_atms: any[];
     cash_out_risk: any[];
     underperforming_atms: any[];
     anomalies: any[];
   };
-  weekly_analysis: {
+  weekly_analysis?: {
     top_atms: any[];
     low_performing_atms: any[];
     trend_summary: string;
   };
-  monthly_analysis: {
+  monthly_analysis?: {
     growth_zones: any[];
     declining_zones: any[];
     expansion_opportunities: any[];
   };
-  location_intelligence: {
+  location_intelligence?: {
     atm_id: string;
     status: string;
     reason: string;
     confidence: number;
   }[];
-  event_analysis: {
+  event_analysis?: {
     high_impact_events: any[];
     holiday_effect: string;
     salary_day_effect: string;
   };
-  optimization_recommendations: {
+  optimization_recommendations?: {
     refill_strategy: string;
     cash_distribution_plan: string;
     logistics_cost_reduction: string;
   };
-  risk_analysis: {
+  risk_analysis?: {
     critical_atms: any[];
     warning_atms: any[];
   };
-  final_summary: string;
+  final_summary?: string;
 }
 
 export async function fetchAnalytics(): Promise<{ data: AnalyticsReport }> {
