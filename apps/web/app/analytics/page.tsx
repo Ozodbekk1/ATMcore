@@ -72,90 +72,330 @@ export default function AnalyticsPage() {
         </button>
       </div>
 
-      {/* Final Summary */}
-      {report.final_summary && (
+      {/* Executive Summary / Network Summary */}
+      {(report.executiveSummary || report.network_summary || report.final_summary) && (
         <div className="bg-[#0a241c] border border-[#1c5542] p-6 rounded-2xl shadow-xl">
           <h3 className="text-lg font-bold text-[#9de1b9] flex items-center gap-2 mb-3">
-            <Lightbulb className="h-5 w-5" /> Executive Summary
+            <Lightbulb className="h-5 w-5" /> {report.networkSize || report.network_summary ? 'Network Intelligence Overview' : 'Executive Summary'}
           </h3>
-          <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.final_summary}</p>
+          <div className="space-y-4">
+            <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">
+              {report.executiveSummary || report.network_summary?.general_observation || report.final_summary}
+            </p>
+
+            {(report.networkSize || report.network_summary) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-[#133c2e]">
+                <div>
+                  <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Key Focus Areas</h4>
+                  <ul className="space-y-1">
+                    {(report.overallRecommendations || report.network_summary?.key_focus_areas || []).map((area, i) => (
+                      <li key={i} className="text-xs text-[#e2f1ea]/70 flex gap-2">
+                        <span className="text-[#9de1b9]">•</span> {area}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex flex-col justify-center items-end">
+                  <div className="text-right">
+                    <span className="text-xs text-[#5d8573] block uppercase tracking-widest font-bold">Total ATMs</span>
+                    <span className="text-2xl font-bold text-[#9de1b9] font-mono">{report.networkSize || report.network_summary?.total_atms_in_network}</span>
+                  </div>
+                  {report.network_summary?.analysis_period_days && (
+                    <div className="text-right mt-2">
+                      <span className="text-xs text-[#5d8573] block uppercase tracking-widest font-bold">Period</span>
+                      <span className="text-sm font-bold text-[#e2f1ea]">{report.network_summary.analysis_period_days} Days</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Risk Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
-          <h3 className="text-lg font-bold text-[#fb7185] flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
-            <ShieldAlert className="h-5 w-5" /> Critical ATMs
-          </h3>
-          <div className="space-y-3">
-            {(report.risk_analysis?.critical_atms || []).length === 0 ? (
-              <p className="text-sm text-[#5d8573]">No critical ATMs at this time</p>
-            ) : (
-              (report.risk_analysis.critical_atms).slice(0, 5).map((atm: any, i: number) => (
-                <div key={i} className="bg-[#1f1115] border border-[#fb7185]/20 p-3 rounded-xl">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-[#e2f1ea]">{atm.atm_id || atm.atmId || `ATM ${i+1}`}</span>
-                    <span className="text-xs text-[#fb7185] bg-[#fb7185]/10 px-2 py-0.5 rounded-md border border-[#fb7185]/30 font-mono">
-                      {atm.risk || atm.reason || 'HIGH RISK'}
-                    </span>
-                  </div>
-                  {atm.reason && <p className="text-xs text-[#78a390] mt-1">{atm.reason}</p>}
+      {/* High Priority Actions (V2) or Performance & Risks (V1) */}
+      {report.highPriorityActions ? (
+        <div className="space-y-6">
+          <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#fb7185] flex items-center gap-2 mb-6 border-b border-[#133c2e] pb-3">
+              <ShieldAlert className="h-5 w-5" /> High Priority Actions
+            </h3>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div>
+                <h4 className="text-xs text-[#fb7185] uppercase tracking-widest mb-4 font-bold flex items-center gap-2">
+                  Critical Understocking
+                </h4>
+                <div className="space-y-4">
+                  {report.highPriorityActions.criticalUnderstocking.map((item, i) => (
+                    <div key={i} className="bg-[#1f1115] border border-[#fb7185]/20 p-4 rounded-xl">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-bold text-[#e2f1ea]">{item.atmId}</span>
+                        <span className="text-[10px] text-[#fb7185] bg-[#fb7185]/10 px-2 py-0.5 rounded-md border border-[#fb7185]/30 uppercase font-bold">Stockout Risk</span>
+                      </div>
+                      <p className="text-xs text-[#e2f1ea]/70 mb-3">{item.issue}</p>
+                      <div className="bg-[#fb7185]/10 p-2.5 rounded-lg border border-[#fb7185]/20">
+                        <span className="text-[9px] text-[#fb7185] font-bold block uppercase mb-1">Action Required</span>
+                        <p className="text-[11px] text-[#fb7185]/90 font-medium italic">{item.action}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
+              </div>
+
+              <div>
+                <h4 className="text-xs text-amber-400 uppercase tracking-widest mb-4 font-bold flex items-center gap-2">
+                  System Anomalies & Overstock
+                </h4>
+                <div className="space-y-4">
+                  {report.highPriorityActions.severeOverstockingAndAnomalies.map((item, i) => (
+                    <div key={i} className="bg-[#241e17] border border-amber-500/20 p-4 rounded-xl">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-bold text-[#e2f1ea]">{item.atmId}</span>
+                        <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 uppercase font-bold">Investigation</span>
+                      </div>
+                      <p className="text-xs text-[#e2f1ea]/70 mb-3">{item.issue}</p>
+                      <div className="bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                        <span className="text-[9px] text-amber-400 font-bold block uppercase mb-1">Action Required</span>
+                        <p className="text-[11px] text-amber-400/90 font-medium italic">{item.action}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      ) : (report.high_performance_atms_analysis || report.low_performance_atms_analysis) ? (
+        <div className="space-y-6">
+          {/* High Performance Analysis */}
+          {report.high_performance_atms_analysis && (
+            <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
+              <h3 className="text-lg font-bold text-[#9de1b9] flex items-center gap-2 mb-2">
+                <TrendingUp className="h-5 w-5" /> High Performance Analysis
+              </h3>
+              <p className="text-xs text-[#78a390] mb-6">{report.high_performance_atms_analysis.description}</p>
 
-        <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
-          <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
-            <AlertTriangle className="h-5 w-5" /> Warning ATMs
-          </h3>
-          <div className="space-y-3">
-            {(report.risk_analysis?.warning_atms || []).length === 0 ? (
-              <p className="text-sm text-[#5d8573]">No warning ATMs at this time</p>
-            ) : (
-              (report.risk_analysis.warning_atms).slice(0, 5).map((atm: any, i: number) => (
-                <div key={i} className="bg-[#241e17] border border-amber-500/20 p-3 rounded-xl">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-[#e2f1ea]">{atm.atm_id || atm.atmId || `ATM ${i+1}`}</span>
-                    <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono">
-                      WARNING
-                    </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-xs text-[#fb7185] uppercase tracking-widest mb-3 font-bold flex items-center gap-2">
+                    <ShieldAlert className="w-3 h-3" /> Immediate Attention
+                  </h4>
+                  <div className="space-y-3">
+                    {report.high_performance_atms_analysis.atms_with_immediate_attention.map((atm, i) => (
+                      <div key={i} className="bg-[#1f1115] border border-[#fb7185]/20 p-3 rounded-xl">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-bold text-[#e2f1ea]">{atm.id}</span>
+                          <span className="text-[10px] text-[#fb7185] bg-[#fb7185]/10 px-2 py-0.5 rounded-md border border-[#fb7185]/30">
+                            {atm.issue}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#e2f1ea]/70 mb-2">{atm.details}</p>
+                        <div className="bg-[#fb7185]/5 p-2 rounded-lg border border-[#fb7185]/10">
+                          <span className="text-[9px] text-[#fb7185] font-bold block uppercase mb-0.5">Recommendation</span>
+                          <p className="text-[10px] text-[#fb7185]/90 italic">{atm.actionable_recommendation}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {atm.reason && <p className="text-xs text-[#78a390] mt-1">{atm.reason}</p>}
                 </div>
-              ))
-            )}
+
+                <div>
+                  <h4 className="text-xs text-amber-400 uppercase tracking-widest mb-3 font-bold flex items-center gap-2">
+                    <AlertTriangle className="w-3 h-3" /> Overstocking Risk
+                  </h4>
+                  <div className="space-y-3">
+                    {report.high_performance_atms_analysis.atms_with_overstocking_potential.map((atm, i) => (
+                      <div key={i} className="bg-[#241e17] border border-amber-500/20 p-3 rounded-xl">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-bold text-[#e2f1ea]">{atm.id}</span>
+                          <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30">
+                            {atm.issue}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#e2f1ea]/70 mb-2">{atm.details}</p>
+                        <div className="bg-amber-500/5 p-2 rounded-lg border border-amber-500/10">
+                          <span className="text-[9px] text-amber-400 font-bold block uppercase mb-0.5">Recommendation</span>
+                          <p className="text-[10px] text-amber-400/90 italic">{atm.actionable_recommendation}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Low Performance Analysis */}
+          {report.low_performance_atms_analysis && (
+            <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
+              <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2 mb-2">
+                <TrendingDown className="h-5 w-5" /> Underutilization Analysis
+              </h3>
+              <p className="text-xs text-[#78a390] mb-6">{report.low_performance_atms_analysis.description}</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <h4 className="text-xs text-[#fb7185] uppercase tracking-widest mb-3 font-bold">Urgent Action Required</h4>
+                  <div className="space-y-3">
+                    {report.low_performance_atms_analysis.atms_requiring_urgent_action.map((atm, i) => (
+                      <div key={i} className="bg-[#1f1115] border border-[#fb7185]/20 p-3 rounded-xl">
+                        <span className="text-sm font-bold text-[#e2f1ea] block mb-1">{atm.id}</span>
+                        <span className="text-[10px] text-[#fb7185] font-mono block mb-2">{atm.issue}</span>
+                        <p className="text-[11px] text-[#e2f1ea]/70 mb-2">{atm.details}</p>
+                        <p className="text-[10px] text-[#fb7185]/90 border-t border-[#fb7185]/10 pt-1 mt-1 font-medium">{atm.actionable_recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs text-[#fb7185] uppercase tracking-widest mb-3 font-bold">Cash-Out Trends</h4>
+                  <div className="space-y-3">
+                    {report.low_performance_atms_analysis.atms_with_cash_out_risk_despite_lower_volume.map((atm, i) => (
+                      <div key={i} className="bg-[#1f1115] border border-[#fb7185]/20 p-3 rounded-xl">
+                        <span className="text-sm font-bold text-[#e2f1ea] block mb-1">{atm.id}</span>
+                        <span className="text-[10px] text-[#fb7185] font-mono block mb-2">{atm.issue}</span>
+                        <p className="text-[11px] text-[#e2f1ea]/70 mb-2">{atm.details}</p>
+                        <p className="text-[10px] text-[#fb7185]/90 border-t border-[#fb7185]/10 pt-1 mt-1 font-medium">{atm.actionable_recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs text-amber-400 uppercase tracking-widest mb-3 font-bold">Inefficient Overstock</h4>
+                  <div className="space-y-3">
+                    {report.low_performance_atms_analysis.atms_with_overstocking_potential.map((atm, i) => (
+                      <div key={i} className="bg-[#241e17] border border-amber-500/20 p-3 rounded-xl">
+                        <span className="text-sm font-bold text-[#e2f1ea] block mb-1">{atm.id}</span>
+                        <span className="text-[10px] text-amber-400 font-mono block mb-2">{atm.issue}</span>
+                        <p className="text-[11px] text-[#e2f1ea]/70 mb-2">{atm.details}</p>
+                        <p className="text-[10px] text-amber-400/90 border-t border-amber-500/10 pt-1 mt-1 font-medium">{atm.actionable_recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Risk Analysis (Old Structure Fallback) */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#fb7185] flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
+              <ShieldAlert className="h-5 w-5" /> Critical ATMs
+            </h3>
+            <div className="space-y-3">
+              {(report.risk_analysis?.critical_atms || []).length === 0 ? (
+                <p className="text-sm text-[#5d8573]">No critical ATMs at this time</p>
+              ) : (
+                (report.risk_analysis?.critical_atms || []).slice(0, 5).map((atm: any, i: number) => (
+                  <div key={i} className="bg-[#1f1115] border border-[#fb7185]/20 p-3 rounded-xl">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-[#e2f1ea]">{atm.atm_id || atm.atmId || `ATM ${i + 1}`}</span>
+                      <span className="text-xs text-[#fb7185] bg-[#fb7185]/10 px-2 py-0.5 rounded-md border border-[#fb7185]/30 font-mono">
+                        {atm.risk || atm.reason || 'HIGH RISK'}
+                      </span>
+                    </div>
+                    {atm.reason && <p className="text-xs text-[#78a390] mt-1">{atm.reason}</p>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
+              <AlertTriangle className="h-5 w-5" /> Warning ATMs
+            </h3>
+            <div className="space-y-3">
+              {(report.risk_analysis?.warning_atms || []).length === 0 ? (
+                <p className="text-sm text-[#5d8573]">No warning ATMs at this time</p>
+              ) : (
+                (report.risk_analysis?.warning_atms || []).slice(0, 5).map((atm: any, i: number) => (
+                  <div key={i} className="bg-[#241e17] border border-amber-500/20 p-3 rounded-xl">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-[#e2f1ea]">{atm.atm_id || atm.atmId || `ATM ${i + 1}`}</span>
+                      <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono">
+                        WARNING
+                      </span>
+                    </div>
+                    {atm.reason && <p className="text-xs text-[#78a390] mt-1">{atm.reason}</p>}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Optimization Recommendations */}
-      {report.optimization_recommendations && (
+      {/* Cash Optimization Opportunities (V2 or V1) */}
+      {(report.cashOptimizationOpportunities || report.overall_optimization_opportunities || report.optimization_recommendations) && (
         <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
           <h3 className="text-lg font-bold text-[#9de1b9] flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
-            <Truck className="h-5 w-5" /> Optimization Recommendations
+            <Truck className="h-5 w-5" /> Optimization & Strategic Recommendations
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl">
-              <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Refill Strategy</h4>
-              <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.optimization_recommendations.refill_strategy || 'N/A'}</p>
-            </div>
-            <div className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl">
-              <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Cash Distribution</h4>
-              <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.optimization_recommendations.cash_distribution_plan || 'N/A'}</p>
-            </div>
-            <div className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl">
-              <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Logistics Cost Reduction</h4>
-              <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.optimization_recommendations.logistics_cost_reduction || 'N/A'}</p>
-            </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {report.cashOptimizationOpportunities ? (
+              report.cashOptimizationOpportunities.map((opp, i) => (
+                <div key={i} className="bg-[#04120e] border border-[#133c2e] p-5 rounded-2xl flex flex-col shadow-inner">
+                  <div className="flex justify-between items-start mb-3">
+                    <h4 className="text-sm font-bold text-[#9de1b9] flex items-center gap-2">
+                      <Activity className="w-4 h-4" /> {opp.category}
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#e2f1ea]/80 leading-relaxed mb-4 flex-1">{opp.description}</p>
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {opp.atms.map((atmId, j) => (
+                      <span key={j} className="text-[10px] bg-[#12382c] text-[#9de1b9] px-2 py-0.5 rounded-full border border-[#1c5542] font-mono">
+                        {atmId}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="bg-[#12382c]/30 p-3 rounded-xl border border-[#1c5542]/50 mt-auto">
+                    <span className="text-[9px] text-[#9de1b9] font-bold block uppercase mb-1">Actionable Strategy</span>
+                    <p className="text-[11px] text-[#e2f1ea]/90 leading-snug">{opp.action}</p>
+                  </div>
+                </div>
+              ))
+            ) : report.overall_optimization_opportunities ? (
+              report.overall_optimization_opportunities.map((opp, i) => (
+                <div key={i} className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl flex flex-col">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-sm font-bold text-[#9de1b9]">{opp.opportunity}</h4>
+                  </div>
+                  <p className="text-xs text-[#e2f1ea]/80 leading-relaxed mb-3 flex-1">{opp.details}</p>
+                  <div className="bg-[#12382c]/50 p-2 rounded-lg border border-[#1c5542]">
+                    <span className="text-[9px] text-[#9de1b9] font-bold block uppercase mb-1">Expected Impact</span>
+                    <p className="text-[10px] text-[#e2f1ea]/90">{opp.impact}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl">
+                  <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Refill Strategy</h4>
+                  <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.optimization_recommendations?.refill_strategy || 'N/A'}</p>
+                </div>
+                <div className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl">
+                  <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Cash Distribution</h4>
+                  <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.optimization_recommendations?.cash_distribution_plan || 'N/A'}</p>
+                </div>
+                <div className="bg-[#04120e] border border-[#133c2e] p-4 rounded-xl">
+                  <h4 className="text-xs text-[#5d8573] uppercase tracking-widest mb-2 font-bold">Logistics Cost Reduction</h4>
+                  <p className="text-sm text-[#e2f1ea]/80 leading-relaxed">{report.optimization_recommendations?.logistics_cost_reduction || 'N/A'}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Weekly Analysis */}
-      {report.weekly_analysis && (
+      {/* Weekly Analysis (Old Fallback) */}
+      {report.weekly_analysis && !report.network_summary && (
         <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
           <h3 className="text-lg font-bold text-[#e2f1ea] flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
             <Calendar className="h-5 w-5 text-[#9de1b9]" /> Weekly Analysis
@@ -171,7 +411,7 @@ export default function AnalyticsPage() {
               <div className="space-y-2">
                 {(report.weekly_analysis.top_atms || []).slice(0, 5).map((atm: any, i: number) => (
                   <div key={i} className="flex items-center justify-between p-2 bg-[#04120e] rounded-lg border border-[#133c2e]/50 text-xs">
-                    <span className="text-[#e2f1ea] font-medium">{atm.atm_id || atm.atmId || `ATM ${i+1}`}</span>
+                    <span className="text-[#e2f1ea] font-medium">{atm.atm_id || atm.atmId || `ATM ${i + 1}`}</span>
                     <span className="text-[#9de1b9] font-mono">{typeof atm === 'string' ? atm : (atm.transactions || atm.volume || '')}</span>
                   </div>
                 ))}
@@ -184,7 +424,7 @@ export default function AnalyticsPage() {
               <div className="space-y-2">
                 {(report.weekly_analysis.low_performing_atms || []).slice(0, 5).map((atm: any, i: number) => (
                   <div key={i} className="flex items-center justify-between p-2 bg-[#04120e] rounded-lg border border-[#133c2e]/50 text-xs">
-                    <span className="text-[#e2f1ea] font-medium">{atm.atm_id || atm.atmId || `ATM ${i+1}`}</span>
+                    <span className="text-[#e2f1ea] font-medium">{atm.atm_id || atm.atmId || `ATM ${i + 1}`}</span>
                     <span className="text-amber-400 font-mono">{typeof atm === 'string' ? atm : (atm.reason || '')}</span>
                   </div>
                 ))}
@@ -194,8 +434,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Event Analysis */}
-      {report.event_analysis && (
+      {/* Event Analysis (Old Fallback) */}
+      {report.event_analysis && !report.network_summary && (
         <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
           <h3 className="text-lg font-bold text-[#e2f1ea] flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
             <Activity className="h-5 w-5 text-[#9de1b9]" /> Event Impact Analysis
@@ -213,8 +453,8 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Location Intelligence */}
-      {report.location_intelligence && report.location_intelligence.length > 0 && (
+      {/* Location Intelligence (Old Fallback) */}
+      {report.location_intelligence && report.location_intelligence.length > 0 && !report.network_summary && (
         <div className="bg-[#0a241c] border border-[#133c2e] rounded-2xl p-6 shadow-xl">
           <h3 className="text-lg font-bold text-[#e2f1ea] flex items-center gap-2 mb-4 border-b border-[#133c2e] pb-3">
             <MapPin className="h-5 w-5 text-[#9de1b9]" /> Location Intelligence
@@ -224,12 +464,11 @@ export default function AnalyticsPage() {
               <div key={i} className="bg-[#04120e] border border-[#133c2e] p-3 rounded-xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-bold text-[#e2f1ea]">{loc.atm_id}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md border font-mono font-bold uppercase ${
-                    loc.status === 'KEEP' ? 'bg-[#12382c] text-[#9de1b9] border-[#1c5542]' :
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-md border font-mono font-bold uppercase ${loc.status === 'KEEP' ? 'bg-[#12382c] text-[#9de1b9] border-[#1c5542]' :
                     loc.status === 'INCREASE_CAPACITY' ? 'bg-[#12382c] text-[#9de1b9] border-[#1c5542]' :
-                    loc.status === 'MOVE' || loc.status === 'REMOVE' ? 'bg-[#fb7185]/10 text-[#fb7185] border-[#fb7185]/30' :
-                    'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                  }`}>{loc.status}</span>
+                      loc.status === 'MOVE' || loc.status === 'REMOVE' ? 'bg-[#fb7185]/10 text-[#fb7185] border-[#fb7185]/30' :
+                        'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                    }`}>{loc.status}</span>
                 </div>
                 <p className="text-xs text-[#5d8573]">{loc.reason}</p>
                 <div className="mt-1">

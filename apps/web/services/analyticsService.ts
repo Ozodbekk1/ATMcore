@@ -30,11 +30,11 @@ type NetworkAnalyticsReport = {
   location_intelligence: {
     atm_id: string;
     status:
-      | 'KEEP'
-      | 'MOVE'
-      | 'REMOVE'
-      | 'INCREASE_CAPACITY'
-      | 'DECREASE_CAPACITY';
+    | 'KEEP'
+    | 'MOVE'
+    | 'REMOVE'
+    | 'INCREASE_CAPACITY'
+    | 'DECREASE_CAPACITY';
     reason: string;
     confidence: number;
   }[];
@@ -57,13 +57,13 @@ type NetworkAnalyticsReport = {
 
 function getGeminiModel(json = false) {
   return genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-flash-latest',
     ...(json
       ? {
-          generationConfig: {
-            responseMimeType: 'application/json',
-          },
-        }
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
+      }
       : {}),
   });
 }
